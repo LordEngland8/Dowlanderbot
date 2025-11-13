@@ -404,3 +404,20 @@ def handle_message(m):
 # ====== ЗАПУСК ПОЛЛІНГУ ======
 print("✅ Бот запущено!")
 bot.infinity_polling(timeout=60, long_polling_timeout=90)
+
+
+import threading
+from flask import Flask
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+
+threading.Thread(target=run_flask).start()
+
