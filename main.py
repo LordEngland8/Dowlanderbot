@@ -317,16 +317,26 @@ def download_and_send(url, chat_id, user, lang):
         bot.send_video(chat_id, f)
 
     # додаткове аудіо
-    if user["video_plus_audio"]:
-        out_audio = os.path.join(DOWNLOAD_DIR, f"{chat_id}_extra.mp3")
-        try:
-            subprocess.run(["yt-dlp", "-x", "--audio-format", "mp3", "-o", out_audio, url], check=True)
-            with open(out_audio, "rb") as f:
-                bot.send_audio(chat_id, f)
-        except:
-            pass
+    # Додаткове аудіо (якщо увімкнено)
+if user["video_plus_audio"]:
+    audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
-    return True
+    # Скачуємо аудіо одразу у .mp3
+    subprocess.run([
+        "yt-dlp",
+        "-x",
+        "--audio-format", "mp3",
+        "-o", audio_template,
+        url
+    ], check=True)
+
+    # Шукаємо згенерований файл
+    audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
+    if audio_files:
+        audio_file = audio_files[0]
+        with open(audio_file, "rb") as f:
+            bot.send_audio(chat_id, f)
+
 
 
 # ============================================================
@@ -457,3 +467,4 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
