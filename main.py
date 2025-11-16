@@ -9,7 +9,7 @@ import threading
 
 # ====== КОНФІГ ======
 # Читаємо токен з TOKEN (Render) або TELEGRAM_TOKEN (локально)
-TOKEN = os.getenv("8289552311:AAGGpP4EjCNRn08sNfibLDyI8z6iYfSxjto") or os.getenv("TELEGRAM_TOKEN", "")
+TOKEN = os.getenv("TOKEN") or os.getenv("TELEGRAM_TOKEN", "")
 bot = TeleBot(TOKEN)
 USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
