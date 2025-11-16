@@ -4,30 +4,30 @@ import glob
 import subprocess
 from datetime import datetime
 from telebot import TeleBot, types
-from flask import Flask, request, abort
-import threading
+from flask import Flask, request
 
 # ============================================================
-#                      КОНФІГ
+#                     КОНФІГУРАЦІЯ
 # ============================================================
 
 TOKEN = os.getenv("TOKEN") or os.getenv("TELEGRAM_TOKEN", "")
 if not TOKEN or ":" not in TOKEN:
-    raise ValueError("❌ TOKEN не встановлено або неправильний!")
+    raise ValueError("❌ TOKEN не встановлено!")
 
 WEBHOOK_HOST = "https://dowlanderbot-2.onrender.com"
 WEBHOOK_PATH = f"/{TOKEN}"
 WEBHOOK_URL = WEBHOOK_HOST + WEBHOOK_PATH
 
-bot = TeleBot(TOKEN, threaded=False)
+bot = TeleBot(TOKEN, threaded=False)   # ❗ threaded вимкнено
 app = Flask(__name__)
 
 USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+
 # ============================================================
-#                      КОРИСТУВАЧІ
+#                 СИСТЕМА КОРИСТУВАЧІВ
 # ============================================================
 
 def load_users():
@@ -38,8 +38,10 @@ def save_users(data):
 
 users = load_users()
 
+
 def get_user(u):
     uid = str(u.id)
+
     if uid not in users:
         users[uid] = {
             "name": u.first_name or "User",
@@ -54,407 +56,308 @@ def get_user(u):
         }
         save_users(users)
 
+    # Якщо мова зламалась — повертаємо укр
     if users[uid]["language"] not in ["uk", "en", "ru", "fr", "de"]:
         users[uid]["language"] = "uk"
         save_users(users)
 
     return users[uid]
 
+
 # ============================================================
-#                      ПЕРЕКЛАД
+#                  ПЕРЕКЛАДИ
 # ============================================================
 
 texts = {
-    "uk": {"menu":"Меню","profile":"Профіль","subscription":"Підписка","settings":"Налаштування","language":"Мова","help":"Про бота","back":"Назад",
-           "lang_saved":"✅ Мову збережено! 🇺🇦","welcome":"👋 Привіт! Надішли посилання на відео.",
-           "enter_url":"📎 Надішли посилання на відео!","free_version":"💎 Безкоштовна версія",
-           "help_text":"🤖 Бот уміє:\n• Завантажувати відео\n• Показувати профіль\n• Має налаштування",
-           "not_understood":"😅 Не розумію, обери кнопку нижче.",
-           "lbl_name":"Ім’я","lbl_subscription":"Підписка","lbl_downloaded":"Завантажено","lbl_format":"Формат",
-           "lbl_only_audio":"Тільки звук","lbl_description":"Опис відео","lbl_video_plus_audio":"Відео + Аудіо","lbl_since":"З",
-           "yes":"Так","no":"Ні","subscription_names":{"free":"Безкоштовна","premium":"Преміум"}},
-    "en": {"menu":"Menu","profile":"Profile","subscription":"Subscription","settings":"Settings","language":"Language","help":"About bot","back":"Back",
-           "lang_saved":"✅ Language saved!","welcome":"👋 Hello! Send a video link.",
-           "enter_url":"📎 Send a video link!","free_version":"💎 Free version",
-           "help_text":"🤖 The bot can:\n• Download videos\n• Display profile\n• Settings available",
+    "uk": {"menu":"Меню","profile":"Профіль","subscription":"Підписка","settings":"Налаштування","language":"Мова","help":"Про бота",
+           "back":"Назад","lang_saved":"✅ Мову збережено! 🇺🇦",
+           "welcome":"👋 Привіт! Надішли посилання на відео.",
+           "enter_url":"📎 Надішли посилання!",
+           "free_version":"💎 Безкоштовна версія.",
+           "help_text":"🤖 Бот може:\n• Завантажувати відео\n• Показувати профіль\n• Має налаштування",
+           "not_understood":"😅 Не розумію, обери кнопку.",
+           "lbl_name":"Ім’я","lbl_subscription":"Підписка","lbl_downloaded":"Завантажено",
+           "lbl_format":"Формат","lbl_only_audio":"Тільки звук",
+           "lbl_description":"Опис","lbl_video_plus_audio":"Відео + Аудіо","lbl_since":"З",
+           "yes":"Так","no":"Ні",
+           "subscription_names":{"free":"Безкоштовна 💎"}
+    },
+    "en": {"menu":"Menu","profile":"Profile","subscription":"Subscription","settings":"Settings","language":"Language","help":"About bot",
+           "back":"Back","lang_saved":"✅ Language saved! 🇬🇧",
+           "welcome":"👋 Hello! Send a link.",
+           "enter_url":"📎 Send a link!",
+           "free_version":"💎 Free version.",
+           "help_text":"🤖 Bot can:\n• Download videos\n• Show profile\n• Settings included",
            "not_understood":"😅 I don't understand.",
-           "lbl_name":"Name","lbl_subscription":"Subscription","lbl_downloaded":"Downloaded","lbl_format":"Format",
-           "lbl_only_audio":"Audio only","lbl_description":"Description","lbl_video_plus_audio":"Video + Audio","lbl_since":"Since",
-           "yes":"Yes","no":"No","subscription_names":{"free":"Free","premium":"Premium"}},
-    "ru": {"menu":"Меню","profile":"Профиль","subscription":"Подписка","settings":"Настройки","language":"Язык","help":"О боте","back":"Назад",
-           "lang_saved":"✅ Язык сохранён!","welcome":"👋 Привет! Пришли ссылку на видео.",
-           "enter_url":"📎 Пришли ссылку на видео!","free_version":"💎 Бесплатная версия",
-           "help_text":"🤖 Бот умеет:\n• Скачать видео\n• Показать профиль\n• Настройки есть",
+           "lbl_name":"Name","lbl_subscription":"Subscription","lbl_downloaded":"Downloaded",
+           "lbl_format":"Format","lbl_only_audio":"Audio only",
+           "lbl_description":"Description","lbl_video_plus_audio":"Video + Audio","lbl_since":"Since",
+           "yes":"Yes","no":"No",
+           "subscription_names":{"free":"Free 💎"}
+    },
+    "ru": {"menu":"Меню","profile":"Профиль","subscription":"Подписка","settings":"Настройки","language":"Язык","help":"О боте",
+           "back":"Назад","lang_saved":"✅ Язык сохранён! 🇷🇺",
+           "welcome":"👋 Привет! Пришли ссылку.",
+           "enter_url":"📎 Пришли ссылку!",
+           "free_version":"💎 Бесплатная версия.",
+           "help_text":"🤖 Бот умеет:\n• Скачать видео\n• Показать профиль\n• Настройки",
            "not_understood":"😅 Не понимаю.",
-           "lbl_name":"Имя","lbl_subscription":"Подписка","lbl_downloaded":"Скачано","lbl_format":"Формат",
-           "lbl_only_audio":"Только аудио","lbl_description":"Описание","lbl_video_plus_audio":"Видео + Аудио","lbl_since":"С",
-           "yes":"Да","no":"Нет","subscription_names":{"free":"Бесплатная","premium":"Премиум"}},
-    "fr": {"menu":"Menu","profile":"Profil","subscription":"Abonnement","settings":"Paramètres","language":"Langue","help":"À propos","back":"Retour",
-           "lang_saved":"✅ Langue enregistrée!","welcome":"👋 Bonjour! Envoie un lien vidéo.",
-           "enter_url":"📎 Envoie un lien vidéo!","free_version":"💎 Version gratuite",
-           "help_text":"🤖 Le bot peut:\n• Télécharger des vidéos\n• Profil\n• Paramètres",
-           "not_understood":"😅 Je ne comprends pas.",
-           "lbl_name":"Nom","lbl_subscription":"Abonnement","lbl_downloaded":"Téléchargé","lbl_format":"Format",
-           "lbl_only_audio":"Audio seul","lbl_description":"Description","lbl_video_plus_audio":"Vidéo + Audio","lbl_since":"Depuis",
-           "yes":"Oui","no":"Non","subscription_names":{"free":"Gratuit","premium":"Premium"}},
-    "de": {"menu":"Menü","profile":"Profil","subscription":"Abo","settings":"Einstellungen","language":"Sprache","help":"Über","back":"Zurück",
-           "lang_saved":"✅ Sprache gespeichert!","welcome":"👋 Hallo! Sende einen Videolink.",
-           "enter_url":"📎 Sende einen Videolink!","free_version":"💎 Kostenlose Version",
-           "help_text":"🤖 Bot kann:\n• Videos laden\n• Profil zeigen\n• Einstellungen",
+           "lbl_name":"Имя","lbl_subscription":"Подписка","lbl_downloaded":"Скачано",
+           "lbl_format":"Формат","lbl_only_audio":"Только звук",
+           "lbl_description":"Описание","lbl_video_plus_audio":"Видео + Аудио","lbl_since":"С",
+           "yes":"Да","no":"Нет",
+           "subscription_names":{"free":"Бесплатная 💎"}
+    },
+    "fr": {"menu":"Menu","profile":"Profil","subscription":"Abonnement","settings":"Paramètres","language":"Langue","help":"À propos du bot",
+           "back":"Retour","lang_saved":"🇫🇷 Langue enregistrée!",
+           "welcome":"👋 Bonjour ! Envoie un lien.",
+           "enter_url":"📎 Envoie un lien!",
+           "free_version":"💎 Version gratuite.",
+           "help_text":"🤖 Le bot peut:\n• Télécharger des vidéos\n• Afficher le profil\n• Paramètres",
+           "not_understood":"😅 Pas compris.",
+           "lbl_name":"Nom","lbl_subscription":"Abonnement","lbl_downloaded":"Téléchargé",
+           "lbl_format":"Format","lbl_only_audio":"Audio uniquement",
+           "lbl_description":"Description","lbl_video_plus_audio":"Vidéo + Audio","lbl_since":"Depuis",
+           "yes":"Oui","no":"Non",
+           "subscription_names":{"free":"Gratuit 💎"}
+    },
+    "de": {"menu":"Menü","profile":"Profil","subscription":"Mitgliedschaft","settings":"Einstellungen","language":"Sprache","help":"Über Bot",
+           "back":"Zurück","lang_saved":"🇩🇪 Sprache gespeichert!",
+           "welcome":"👋 Hallo! Link senden.",
+           "enter_url":"📎 Link senden!",
+           "free_version":"💎 Kostenlose Version.",
+           "help_text":"🤖 Bot kann:\n• Videos downloaden\n• Profil anzeigen\n• Einstellungen",
            "not_understood":"😅 Ich verstehe nicht.",
-           "lbl_name":"Name","lbl_subscription":"Abo","lbl_downloaded":"Geladen","lbl_format":"Format",
-           "lbl_only_audio":"Nur Audio","lbl_description":"Beschreibung","lbl_video_plus_audio":"Video + Audio","lbl_since":"Seit",
-           "yes":"Ja","no":"Nein","subscription_names":{"free":"Kostenlos","premium":"Premium"}}
+           "lbl_name":"Name","lbl_subscription":"Mitgliedschaft","lbl_downloaded":"Heruntergeladen",
+           "lbl_format":"Format","lbl_only_audio":"Nur Audio",
+           "lbl_description":"Beschreibung","lbl_video_plus_audio":"Video + Audio","lbl_since":"Seit",
+           "yes":"Ja","no":"Nein",
+           "subscription_names":{"free":"Kostenlos 💎"}
+    }
 }
 
+
 # ============================================================
-#                    КЛАВІАТУРИ
+#                 КЛАВІАТУРИ
 # ============================================================
 
 def main_menu(lang):
     t = texts[lang]
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    kb.add(
-        types.KeyboardButton(f"📋 {t['menu']}"),
-        types.KeyboardButton(f"👤 {t['profile']}"),
-        types.KeyboardButton(f"⚙️ {t['settings']}"),
-        types.KeyboardButton(f"💎 {t['subscription']}"),
-        types.KeyboardButton(f"🌍 {t['language']}"),
-        types.KeyboardButton(f"ℹ️ {t['help']}")
-    )
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(f"📋 {t['menu']}", f"👤 {t['profile']}")
+    kb.add(f"⚙️ {t['settings']}", f"🌍 {t['language']}")
+    kb.add(f"💎 {t['subscription']}", f"ℹ️ {t['help']}")
     return kb
 
 def back_menu(lang):
-    t = texts[lang]
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(types.KeyboardButton(f"⬅️ {t['back']}"))
-    return kb
+    return types.ReplyKeyboardMarkup(resize_keyboard=True).add(f"⬅️ {texts[lang]['back']}")
 
-def ask_language(cid):
-    kb = types.InlineKeyboardMarkup(row_width=2)
-    langs = [("🇺🇦 Українська","uk"),("🇬🇧 English","en"),("🇷🇺 Русский","ru"),
-             ("🇫🇷 Français","fr"),("🇩🇪 Deutsch","de")]
-    for name, code in langs:
-        kb.add(types.InlineKeyboardButton(name, callback_data=f"lang_{code}"))
-    bot.send_message(cid, "🌍 Вибери мову:", reply_markup=kb)
 
 # ============================================================
-#                 ФУНКЦІЯ ЗАВАНТАЖЕННЯ ВІДЕО
-# ============================================================
-
-def download_and_send(url: str, chat_id: int, lang: str, user: dict):
-    t = texts.get(lang, texts["uk"])
-
-    fmt = user.get("format", "mp4").lower()
-    video_plus_audio = bool(user.get("video_plus_audio", True))
-    include_desc = bool(user.get("include_description", True))
-
-    wait_msg = bot.send_message(chat_id, "⏳ Завантаження… зачекай.")
-    wait_msg_id = wait_msg.message_id
-
-    # --- команда для відео ---
-    def build_cmd(fmt: str):
-        if fmt == "mp3":
-            return ["yt-dlp", "-x", "--audio-format", "mp3"]
-        elif fmt == "webm":
-            return ["yt-dlp", "-S", "ext:webm", "-f", "bv*+ba/b"]
-        else:
-            return ["yt-dlp", "-S", "ext:mp4:m4a", "-f", "bv*+ba/b"]
-
-    cmd = build_cmd(fmt)
-
-    outtmpl_video = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
-    cmd += ["-o", outtmpl_video, url]
-
-    # --- качаємо відео ---
-    try:
-        subprocess.run(cmd, check=True)
-    except Exception as e:
-        bot.edit_message_text(
-            f"❌ Помилка при завантаженні:\n`{e}`",
-            chat_id,
-            wait_msg_id,
-            parse_mode="Markdown"
-        )
-        return
-
-    # --- шукаємо відео ---
-    video_candidates = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
-    if not video_candidates:
-        bot.edit_message_text("❌ Відео не знайдено.", chat_id, wait_msg_id)
-        return
-
-    video_file = sorted(video_candidates, key=os.path.getmtime)[-1]
-
-    # --- окреме аудіо ---
-    audio_file = None
-    if video_plus_audio:
-        audio_path = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.mp3")
-        cmd_audio = ["yt-dlp", "-x", "--audio-format", "mp3", "-o", audio_path, url]
-
-        try:
-            subprocess.run(cmd_audio, check=True)
-            audio_file = audio_path
-        except Exception:
-            audio_file = None
-
-    # --- метадані ---
-    caption = None
-    if include_desc:
-        try:
-            meta_cmd = ["yt-dlp", "--get-title", "--get-description", url]
-            meta = subprocess.check_output(meta_cmd).decode("utf-8", errors="ignore").splitlines()
-
-            title = meta[0] if meta else ""
-            descr = "\n".join(meta[1:]) if len(meta) > 1 else ""
-
-            if len(descr) > 900:
-                descr = descr[:900] + "…"
-
-            caption = (title + "\n\n" + descr).strip()
-            if caption == "":
-                caption = None
-        except:
-            caption = None
-
-    # --- надсилання відео ---
-    try:
-        with open(video_file, "rb") as f:
-            bot.send_video(chat_id, f, caption=caption)
-    except:
-        bot.edit_message_text(
-            "❌ Не вдалося надіслати відео (можливо, файл великий).",
-            chat_id,
-            wait_msg_id
-        )
-        return
-
-    # --- надсилання аудіо ---
-    if audio_file:
-        try:
-            with open(audio_file, "rb") as f:
-                bot.send_audio(chat_id, f, caption=caption)
-        except:
-            pass
-
-    # --- очищення ---
-    try:
-        os.remove(video_file)
-        if audio_file:
-            os.remove(audio_file)
-    except:
-        pass
-
-    bot.edit_message_text("✅ Готово!", chat_id, wait_msg_id)
-
-# ============================================================
-#                        CALLBACK
+#                 CALLBACK (налаштування)
 # ============================================================
 
 @bot.callback_query_handler(func=lambda c: True)
 def callback(c):
     user = get_user(c.from_user)
-    lang = user.get("language", "uk")
-    t = texts.get(lang, texts["uk"])
+    lang = user["language"]
+    t = texts[lang]
 
-    # --- Зміна мови ---
     if c.data.startswith("lang_"):
         user["language"] = c.data.split("_")[1]
         save_users(users)
 
-        # видаляємо старе повідомлення
-        try:
-            bot.delete_message(c.message.chat.id, c.message.message_id)
-        except:
-            pass
-
-        bot.send_message(
-            c.message.chat.id,
-            texts[user["language"]]["lang_saved"],
-            reply_markup=main_menu(user["language"])
-        )
-        bot.answer_callback_query(c.id)
+        bot.delete_message(c.message.chat.id, c.message.message_id)
+        bot.send_message(c.message.chat.id, t["lang_saved"], reply_markup=main_menu(user["language"]))
         return
 
-    # --- Повернення в меню ---
-    if c.data == "back_to_menu":
-        try:
-            bot.delete_message(c.message.chat.id, c.message.message_id)
-        except:
-            pass
+    if c.data == "toggle_format_mp4":
+        user["format"] = "mp4"
 
-        bot.send_message(
-            c.message.chat.id,
-            t["menu"],
-            reply_markup=main_menu(lang)
-        )
-        bot.answer_callback_query(c.id)
-        return
+    elif c.data == "toggle_format_mp3":
+        user["format"] = "mp3"
+        user["audio_only"] = True
 
-    # --- Формат ---
-    if c.data.startswith("set_format_"):
-        user["format"] = c.data.split("_")[2]
-        user["audio_only"] = (user["format"] == "mp3")
-        save_users(users)
-        bot.answer_callback_query(c.id, f"OK: {user['format'].upper()}")
+    elif c.data == "toggle_format_webm":
+        user["format"] = "webm"
 
-    # --- Опис ---
-    if c.data == "toggle_desc":
+    elif c.data == "toggle_desc":
         user["include_description"] = not user["include_description"]
-        save_users(users)
-        bot.answer_callback_query(
-            c.id,
-            f"{t['lbl_description']}: {t['yes'] if user['include_description'] else t['no']}"
-        )
 
-    # --- Відео + аудіо ---
-    if c.data == "toggle_vpa":
+    elif c.data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
-        save_users(users)
-        bot.answer_callback_query(
-            c.id,
-            f"{t['lbl_video_plus_audio']}: {t['yes'] if user['video_plus_audio'] else t['no']}"
-        )
 
-    # перерендер налаштувань
-    try:
-        bot.edit_message_reply_markup(
-            c.message.chat.id,
-            c.message.message_id,
-            reply_markup=None
-        )
-    except:
-        pass
+    save_users(users)
+    bot.answer_callback_query(c.id, "✔ Збережено!")
 
-    show_settings(c.message.chat.id, user, lang)
 
 # ============================================================
-#                        ОБРОБКА ПОВІДОМЛЕНЬ
+#                 ЗАВАНТАЖЕННЯ ВІДЕО
+# ============================================================
+
+def build_yt_cmd(url, fmt, audio_only=False):
+    cmd = ["yt-dlp"]
+
+    if audio_only or fmt == "mp3":
+        cmd += ["-x", "--audio-format", "mp3"]
+
+    elif fmt == "webm":
+        cmd += ["-S", "ext:webm", "-f", "bv*+ba/b"]
+    else:
+        cmd += ["-S", "ext:mp4:m4a", "-f", "bv*+ba/b"]
+
+    cmd.append(url)
+    return cmd
+
+
+def download_and_send(url, chat_id, user, lang):
+    fmt = user["format"]
+    audio_only = (fmt == "mp3")
+    video_plus_audio = user["video_plus_audio"]
+
+    # Відео
+    video_out = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
+    cmd = build_yt_cmd(url, fmt, audio_only)
+    cmd.insert(-1, "-o")
+    cmd.insert(-1, video_out)
+
+    try:
+        subprocess.run(cmd, check=True)
+    except Exception:
+        bot.send_message(chat_id, "❌ Помилка завантаження відео.")
+        return False
+
+    # Аудіо
+    audio_file = None
+    if video_plus_audio:
+        audio_out = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.mp3")
+        try:
+            subprocess.run(["yt-dlp", "-x", "--audio-format", "mp3", "-o", audio_out, url], check=True)
+            audio_file = audio_out
+        except:
+            audio_file = None
+
+    # Знаходимо відеофайл
+    video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
+    if not video_files:
+        bot.send_message(chat_id, "❌ Не знайшов відео.")
+        return False
+
+    video_file = video_files[0]
+
+    # Відправка
+    with open(video_file, "rb") as f:
+        bot.send_video(chat_id, f)
+
+    if audio_file:
+        with open(audio_file, "rb") as f:
+            bot.send_audio(chat_id, f)
+
+    return True
+
+
+# ============================================================
+#                 ХЕНДЛЕРИ ПОВІДОМЛЕНЬ
 # ============================================================
 
 @bot.message_handler(commands=["start"])
-def start(message):
-    u = get_user(message.from_user)
+def start(m):
+    u = get_user(m.from_user)
     lang = u["language"]
-    bot.send_message(message.chat.id, texts[lang]["welcome"], reply_markup=main_menu(lang))
+    bot.send_message(m.chat.id, texts[lang]["welcome"], reply_markup=main_menu(lang))
+
 
 @bot.message_handler(func=lambda m: True)
-def handle_all(m):
+def msg(m):
     u = get_user(m.from_user)
     lang = u["language"]
     t = texts[lang]
-
-    # антиспам: ігнор своїх повідомлень
-    if m.from_user.id == bot.get_me().id:
-        return
-
-    # групи: працює тільки через @username або посилання
-    if m.chat.type in ["group", "supergroup"]:
-        username = bot.get_me().username.lower()
-        if f"@{username}" not in (m.text or "").lower() and not (m.text or "").startswith(("http://", "https://")):
-            return
-
-    # якщо це посилання — качаємо
-    if (m.text or "").startswith(("http://", "https://")):
-        url = m.text.strip()
-        threading.Thread(target=download_and_send, args=(url, m.chat.id, lang, u)).start()
-        return
-
-    # інші кнопки — тільки у приватному чаті
-    if m.chat.type != "private":
-        return
-
     txt = (m.text or "").lower()
 
+    # Якщо прийшло посилання — качаємо
+    if txt.startswith(("http://", "https://")):
+        bot.send_message(m.chat.id, "⏳ Завантаження…")
+        ok = download_and_send(m.text, m.chat.id, u, lang)
+        if ok:
+            u["videos_downloaded"] += 1
+            save_users(users)
+        return
+
+    # Меню
     if "меню" in txt or "menu" in txt:
         bot.send_message(m.chat.id, t["enter_url"], reply_markup=main_menu(lang))
         return
 
-    if "проф" in txt or "profil" in txt or "prof" in txt:
-        sub_key = u.get("subscription")
-        sub_text = t["subscription_names"].get(sub_key, sub_key)
-
+    if "проф" in txt or "profile" in txt:
         msg = (
             f"👤 {t['profile']}\n\n"
             f"🆔 `{m.from_user.id}`\n"
             f"👋 {t['lbl_name']}: {u['name']}\n"
-            f"💎 {t['lbl_subscription']}: {sub_text}\n"
             f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
             f"🎞️ {t['lbl_format']}: {u['format']}\n"
             f"📝 {t['lbl_description']}: {t['yes'] if u['include_description'] else t['no']}\n"
             f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
-            f"📅 {t['lbl_since']}: {u['joined']}"
         )
-
         bot.send_message(m.chat.id, msg, parse_mode="Markdown", reply_markup=back_menu(lang))
         return
 
-    if "нал" in txt or "sett" in txt:
-        kb = types.InlineKeyboardMarkup(row_width=2)
-        kb.add(
-            types.InlineKeyboardButton("🎞 MP4", callback_data="set_format_mp4"),
-            types.InlineKeyboardButton("🎧 MP3", callback_data="set_format_mp3"),
-            types.InlineKeyboardButton("🌐 WEBM", callback_data="set_format_webm")
-        )
-        kb.add(types.InlineKeyboardButton(
-            f"📝 {t['lbl_description']}: {t['yes'] if u['include_description'] else t['no']}",
-            callback_data="toggle_desc"
-        ))
-        kb.add(types.InlineKeyboardButton(
-            f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}",
-            callback_data="toggle_vpa"
-        ))
-        bot.send_message(m.chat.id, t["settings"], reply_markup=kb)
+    if "мова" in txt or "language" in txt:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
+        kb.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+        kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
+        kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
+        kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
+
+        bot.send_message(m.chat.id, "🌍 Обери мову:", reply_markup=kb)
         return
 
-    if "мова" in txt or "lang" in txt:
-        ask_language(m.chat.id)
+    if "налаш" in txt or "setting" in txt:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("MP4", callback_data="toggle_format_mp4"))
+        kb.add(types.InlineKeyboardButton("MP3", callback_data="toggle_format_mp3"))
+        kb.add(types.InlineKeyboardButton("WEBM", callback_data="toggle_format_webm"))
+        kb.add(types.InlineKeyboardButton(f"{t['lbl_description']}", callback_data="toggle_desc"))
+        kb.add(types.InlineKeyboardButton(f"{t['lbl_video_plus_audio']}", callback_data="toggle_vpa"))
+
+        bot.send_message(m.chat.id, "⚙️ Налаштування:", reply_markup=kb)
         return
 
-    if "підпис" in txt or "sub" in txt:
-        sub_key = u.get("subscription")
-        sub_text = t["subscription_names"].get(sub_key, sub_key)
-        bot.send_message(m.chat.id, sub_text, reply_markup=back_menu(lang))
+    if "підпис" in txt or "subscription" in txt:
+        bot.send_message(m.chat.id, t["free_version"], reply_markup=back_menu(lang))
         return
 
-    if "help" in txt or "про" in txt:
+    if "help" in txt or "про бота" in txt:
         bot.send_message(m.chat.id, t["help_text"], reply_markup=back_menu(lang))
-        return
-
-    if "назад" in txt or "back" in txt:
-        bot.send_message(m.chat.id, t["menu"], reply_markup=main_menu(lang))
         return
 
     bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
 
+
 # ============================================================
-#                      FLASK + WEBHOOK
+#                     WEBHOOK
 # ============================================================
 
 @app.route("/", methods=["GET"])
-def index():
+def home():
     return "Bot is running!"
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook_receiver():
-    if request.headers.get("content-type") == "application/json":
-        json_data = request.get_data().decode("utf-8")
-        update = types.Update.de_json(json_data)
-        bot.process_new_updates([update])
-        return "OK", 200
-    else:
-        abort(403)
+    json_data = request.get_json()
+    update = types.Update.de_json(json_data)
+    bot.process_new_updates([update])
+    return "OK", 200
+
 
 # ============================================================
-#                        ЗАПУСК
+#               ЗАПУСК FLASK + ВСТАНОВЛЕННЯ WEBHOOK
 # ============================================================
-
-def set_webhook():
-    bot.remove_webhook()
-    bot.set_webhook(url=WEBHOOK_URL)
 
 if __name__ == "__main__":
-    print("✅ Webhook встановлено!")
-    set_webhook()
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    print("🚀 Запуск Flask + Webhook")
 
+    bot.delete_webhook()
+    bot.set_webhook(url=WEBHOOK_URL)
+
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
