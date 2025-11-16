@@ -4,9 +4,12 @@ import glob
 import subprocess
 from datetime import datetime
 from telebot import TeleBot, types
+from flask import Flask
+import threading
 
 # ====== КОНФІГ ======
-TOKEN = os.getenv("TELEGRAM_TOKEN", "8289552311:AAGGpP4EjCNRn08sNfibLDyI8z6iYfSxjto")  # ← заміни або вистав через env
+# Читаємо токен з TOKEN (Render) або TELEGRAM_TOKEN (локально)
+TOKEN = os.getenv("8289552311:AAGGpP4EjCNRn08sNfibLDyI8z6iYfSxjto") or os.getenv("TELEGRAM_TOKEN", "")
 bot = TeleBot(TOKEN)
 USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
@@ -122,7 +125,7 @@ def show_settings(chat_id, user, lang):
         types.InlineKeyboardButton(f"🎧 MP3", callback_data="set_format_mp3"),
         types.InlineKeyboardButton(f"🌐 WEBM", callback_data="set_format_webm")
     )
-    # 🔹 Прибрано кнопку "Тільки звук"
+    # Кнопку "Тільки звук" прибрано з інтерфейсу
     kb.add(
         types.InlineKeyboardButton(f"📝 {t['lbl_description']}: {t['yes'] if user['include_description'] else t['no']}", callback_data="toggle_desc")
     )
@@ -194,11 +197,8 @@ def build_yt_dlp_cmd(url: str, fmt: str, audio_only: bool) -> list:
         cmd += ["-S", "ext:webm", "-f", "bv*+ba/b"]
     else:
         # дефолт mp4: найкраще відео/аудіо злиті в mp4
-        # -S ext:mp4:m4a дає пріоритет mp4 для відео та m4a для аудіо
         cmd += ["-S", "ext:mp4:m4a", "-f", "bv*+ba/b"]
 
-    # файл у директорії DOWNLOAD_DIR з префіксом chat_id та автоматичним розширенням
-    # шаблон підставимо пізніше, бо нам потрібен chat_id
     cmd += [url]
     return cmd
 
@@ -206,11 +206,11 @@ def build_yt_dlp_cmd(url: str, fmt: str, audio_only: bool) -> list:
 def download_and_send(url: str, chat_id: int, lang: str, user: dict):
     t = texts.get(lang, texts["uk"])
     fmt = (user.get("format") or "mp4").lower()
-    video_plus_audio = bool(user.get("video_plus_audio"))  # якщо "Відео + Аудіо" включено
+    video_plus_audio = bool(user.get("video_plus_audio"))
     include_desc = bool(user.get("include_description"))
 
     # Формуємо команду для завантаження відео
-    cmd = build_yt_dlp_cmd(url, fmt, False)  # Без "Тільки аудіо"
+    cmd = build_yt_dlp_cmd(url, fmt, False)
 
     # Шлях до збереження відео
     outtmpl_video = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
@@ -228,28 +228,28 @@ def download_and_send(url: str, chat_id: int, lang: str, user: dict):
 
     # Якщо "Відео + Аудіо" включено, завантажуємо аудіо
     audio_file = None
-    if video_plus_audio:  # Якщо включено "Відео + Аудіо"
+    if video_plus_audio:
         outtmpl_audio = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.mp3")
-
-        # Формуємо команду для завантаження тільки аудіо
         cmd_audio = ["yt-dlp", "-x", "--audio-format", "mp3", "-o", outtmpl_audio, url]
 
         try:
             subprocess.run(cmd_audio, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            audio_file = \
-            sorted(glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.mp3")), key=os.path.getmtime, reverse=True)[0]
+            audio_file = sorted(
+                glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.mp3")),
+                key=os.path.getmtime,
+                reverse=True
+            )[0]
         except Exception as e:
             bot.send_message(chat_id, f"❌ Помилка при завантаженні аудіо:\n`{e}`", parse_mode="Markdown")
             return False
 
     # Шукаємо відео
-    video_file = \
-    sorted(glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*")), key=os.path.getmtime, reverse=True)[0]
-
-    # Перевіряємо, чи існують файли
-    if not video_file:
+    video_candidates = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
+    if not video_candidates:
         bot.send_message(chat_id, "❌ Не вдалося знайти відео після завантаження.")
         return False
+
+    video_file = sorted(video_candidates, key=os.path.getmtime, reverse=True)[0]
 
     # Підготовка підпису (caption)
     caption = None
@@ -261,7 +261,6 @@ def download_and_send(url: str, chat_id: int, lang: str, user: dict):
             title = meta[0].strip() if meta else ""
             descr = "\n".join(meta[1:]).strip() if len(meta) > 1 else ""
 
-            # обрізка довжини опису/назви
             if len(descr) > 900:
                 descr = descr[:900] + "…"
             if len(title) > 200:
@@ -270,12 +269,11 @@ def download_and_send(url: str, chat_id: int, lang: str, user: dict):
         except Exception:
             caption = None
 
-    # Відправлення відео
+    # Відправлення відео / аудіо
     try:
         with open(video_file, "rb") as f:
             bot.send_video(chat_id, f, caption=caption)
 
-        # Якщо "Відео + Аудіо" включено, відправляємо аудіо
         if audio_file:
             with open(audio_file, "rb") as f:
                 bot.send_audio(chat_id, f, caption=caption)
@@ -285,7 +283,6 @@ def download_and_send(url: str, chat_id: int, lang: str, user: dict):
         return False
 
     finally:
-        # Очищаємо файли
         try:
             os.remove(video_file)
             if audio_file:
@@ -311,18 +308,20 @@ def handle_message(m):
     t = texts.get(lang, texts["uk"])
     text_low = (m.text or "").lower()
 
-    # --- Дозволяємо роботу у всіх типах чатів ---
     chat_type = m.chat.type
     is_private = chat_type == "private"
     is_group = chat_type in ["group", "supergroup"]
     is_channel = chat_type == "channel"
 
-    # --- Якщо це група — реагує лише на згадку або посилання ---
     if is_group:
-        if not (f"@{bot.get_me().username.lower()}" in text_low or text_low.startswith(("http://", "https://"))):
+        try:
+            me = bot.get_me()
+            username = me.username.lower() if me.username else ""
+        except Exception:
+            username = ""
+        if not (username and f"@{username}" in text_low) and not text_low.startswith(("http://", "https://")):
             return
 
-    # --- Якщо це канал (бот адміністратор) ---
     if is_channel:
         if not (m.text and m.text.startswith(("http://", "https://"))):
             return
@@ -341,7 +340,6 @@ def handle_message(m):
     if (m.text or "").startswith(("http://", "https://")):
         msg = bot.send_message(m.chat.id, "⏳ Завантаження… це може зайняти трохи часу.")
         ok = download_and_send(m.text.strip(), m.chat.id, lang, u)
-        # Видалити повідомлення "Завантаження..." після завершення
         try:
             bot.delete_message(m.chat.id, msg.message_id)
         except:
@@ -397,27 +395,27 @@ def handle_message(m):
             bot.send_message(m.chat.id, t["menu"], reply_markup=main_menu(lang))
             return
 
-        # 3️⃣ Фолбек
         bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
 
 
-# ====== ЗАПУСК ПОЛЛІНГУ ======
-print("✅ Бот запущено!")
-bot.infinity_polling(timeout=60, long_polling_timeout=90)
-
-
-import threading
-from flask import Flask
-import os
-
+# ====== FLASK ДЛЯ RENDER ======
 app = Flask(__name__)
 
-@app.route('/')
+@app.route("/")
 def home():
     return "Bot is running!"
 
 def run_flask():
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
-threading.Thread(target=run_flask).start()
 
+# ====== ЗАПУСК БОТА ТА FLASK ======
+if __name__ == "__main__":
+    print("✅ Бот запущено (Render + Flask)!")
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # ВАЖЛИВО: тільки ОДИН polling → не буде 409
+    bot.infinity_polling(timeout=60, long_polling_timeout=90, skip_pending=True)
