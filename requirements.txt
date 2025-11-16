@@ -1,8 +1,8 @@
 pyTelegramBotAPI==4.29.1
+Flask==3.0.3
 yt-dlp==2025.10.22
 requests==2.32.5
-Flask==3.0.3
-charset-normalizer==3.4.4
 urllib3==2.5.0
+charset-normalizer==3.4.4
 idna==3.11
 certifi==2025.10.5
