@@ -295,12 +295,15 @@ def build_yt_cmd(url, fmt, out):
 def download_and_send(url, chat_id, user, lang):
     fmt = user["format"]
 
-    # Якщо обрано MP3 → качаємо лише аудіо
+    # ==========================
+    #        АУДІО ТІЛЬКИ
+    # ==========================
     if fmt == "mp3":
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
         subprocess.run([
-            "yt-dlp", "-x",
+            "yt-dlp",
+            "-x",
             "--audio-format", "mp3",
             "-o", audio_template,
             url
@@ -312,28 +315,37 @@ def download_and_send(url, chat_id, user, lang):
                 bot.send_audio(chat_id, f)
         return True
 
-    # ---------- ВІДЕО (MP4 / WEBM) ----------
+    # ==========================
+    #        ВІДЕО
+    # ==========================
+
+    # ПРАВИЛЬНА команда для будь-якого сайту:
+    # -f bestvideo+bestaudio OR best
     video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
 
     subprocess.run([
         "yt-dlp",
         "-o", video_template,
-        "-S", "ext:webm" if fmt == "webm" else "ext:mp4:m4a",
-        "-f", "bv*+ba/b",
+        "-f", "bv*+ba/b",   # якщо є аудіо → об'єднає, якщо нема → візьме best
         url
     ], check=True)
 
+    # Знаходимо відеофайл
     video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
     if video_files:
         with open(video_files[0], "rb") as f:
             bot.send_video(chat_id, f)
 
-    # ---------- ДОДАТКОВЕ АУДІО (якщо увімкнено) ----------
+    # ==========================
+    #        АУДІО + ВІДЕО
+    # ==========================
+
     if user["video_plus_audio"]:
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
         subprocess.run([
-            "yt-dlp", "-x",
+            "yt-dlp",
+            "-x",
             "--audio-format", "mp3",
             "-o", audio_template,
             url
@@ -345,6 +357,7 @@ def download_and_send(url, chat_id, user, lang):
                 bot.send_audio(chat_id, f)
 
     return True
+
 
 
 # ============================================================
@@ -475,5 +488,6 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
