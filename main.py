@@ -254,31 +254,79 @@ def download_and_send(url: str, chat_id: int, lang: str, user: dict):
 @bot.callback_query_handler(func=lambda c: True)
 def callback(c):
     user = get_user(c.from_user)
-    lang = user["language"]
-    t = texts[lang]
+    lang = user.get("language", "uk")
+    t = texts.get(lang, texts["uk"])
 
+    # --- Зміна мови ---
     if c.data.startswith("lang_"):
         user["language"] = c.data.split("_")[1]
         save_users(users)
-        bot.edit_message_text(texts[user["language"]]["lang_saved"], c.message.chat.id)
-        bot.send_message(c.message.chat.id, t["menu"], reply_markup=main_menu(user["language"]))
+
+        # видаляємо старе повідомлення
+        try:
+            bot.delete_message(c.message.chat.id, c.message.message_id)
+        except:
+            pass
+
+        bot.send_message(
+            c.message.chat.id,
+            texts[user["language"]]["lang_saved"],
+            reply_markup=main_menu(user["language"])
+        )
+        bot.answer_callback_query(c.id)
         return
 
-    if c.data == "set_format_mp4":
-        user["format"] = "mp4"
-    elif c.data == "set_format_mp3":
-        user["format"] = "mp3"
-        user["audio_only"] = True
-    elif c.data == "set_format_webm":
-        user["format"] = "webm"
+    # --- Повернення в меню ---
+    if c.data == "back_to_menu":
+        try:
+            bot.delete_message(c.message.chat.id, c.message.message_id)
+        except:
+            pass
 
+        bot.send_message(
+            c.message.chat.id,
+            t["menu"],
+            reply_markup=main_menu(lang)
+        )
+        bot.answer_callback_query(c.id)
+        return
+
+    # --- Формат ---
+    if c.data.startswith("set_format_"):
+        user["format"] = c.data.split("_")[2]
+        user["audio_only"] = (user["format"] == "mp3")
+        save_users(users)
+        bot.answer_callback_query(c.id, f"OK: {user['format'].upper()}")
+
+    # --- Опис ---
     if c.data == "toggle_desc":
         user["include_description"] = not user["include_description"]
+        save_users(users)
+        bot.answer_callback_query(
+            c.id,
+            f"{t['lbl_description']}: {t['yes'] if user['include_description'] else t['no']}"
+        )
 
+    # --- Відео + аудіо ---
     if c.data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
+        save_users(users)
+        bot.answer_callback_query(
+            c.id,
+            f"{t['lbl_video_plus_audio']}: {t['yes'] if user['video_plus_audio'] else t['no']}"
+        )
 
-    save_users(users)
+    # перерендер налаштувань
+    try:
+        bot.edit_message_reply_markup(
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=None
+        )
+    except:
+        pass
+
+    show_settings(c.message.chat.id, user, lang)
 
 # ============================================================
 #                        ОБРОБКА ПОВІДОМЛЕНЬ
@@ -409,3 +457,4 @@ if __name__ == "__main__":
     print("✅ Webhook встановлено!")
     set_webhook()
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+
