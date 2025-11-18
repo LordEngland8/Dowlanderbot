@@ -275,8 +275,16 @@ def match_cmd(text):
 
 
 # ============================================================
-#                 ЗАВАНТАЖЕННЯ ВІДЕО (ВИПРАВЛЕНО)
+#                 ЗАВАНТАЖЕННЯ ВІДЕО (ОНОВЛЕНО)
 # ============================================================
+
+COOKIES_FILE = "cookies.txt"  # якщо колись додаси cookies – бот автоматично їх використає
+
+def _yt_base_args():
+    args = ["yt-dlp"]
+    if os.path.exists(COOKIES_FILE):
+        args += ["--cookies", COOKIES_FILE]
+    return args
 
 def download_and_send(url, chat_id, user, lang):
     fmt = user["format"]
@@ -287,14 +295,14 @@ def download_and_send(url, chat_id, user, lang):
     if fmt == "mp3":
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
-        subprocess.run([
-            "yt-dlp",
+        cmd = _yt_base_args() + [
             "-o", audio_template,
             "-x",
             "--audio-format", "mp3",
             "--audio-quality", "0",
             url
-        ], check=True)
+        ]
+        subprocess.run(cmd, check=True)
 
         audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
         if audio_files:
@@ -309,16 +317,14 @@ def download_and_send(url, chat_id, user, lang):
 
     video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
 
-    # Головна правильна команда для ВСІХ сайтів:
-    subprocess.run([
-        "yt-dlp",
+    cmd = _yt_base_args() + [
         "-o", video_template,
         "-f", "bestvideo*+bestaudio/best",
         "--merge-output-format", "mp4",
         url
-    ], check=True)
+    ]
+    subprocess.run(cmd, check=True)
 
-    # Отримуємо відео
     video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
     if video_files:
         with open(video_files[0], "rb") as f:
@@ -331,14 +337,14 @@ def download_and_send(url, chat_id, user, lang):
     if user["video_plus_audio"]:
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
-        subprocess.run([
-            "yt-dlp",
+        cmd = _yt_base_args() + [
             "-o", audio_template,
             "-x",
             "--audio-format", "mp3",
             "--audio-quality", "0",
             url
-        ], check=True)
+        ]
+        subprocess.run(cmd, check=True)
 
         audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
         if audio_files:
@@ -346,6 +352,7 @@ def download_and_send(url, chat_id, user, lang):
                 bot.send_audio(chat_id, f)
 
     return True
+
 
 
 
@@ -477,6 +484,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
