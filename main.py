@@ -429,16 +429,16 @@ def msg(m):
     t = texts[lang]
     txt = (m.text or "").lower()
 
-        if txt.startswith("http"):
+    # --- ОБРОБКА ПОСИЛАННЯ ---
+    if txt.startswith("http"):
         bot.send_message(m.chat.id, "⏳ Завантаження…")
         ok = download_and_send(m.text, m.chat.id, u, lang)
         if ok:
             u["videos_downloaded"] += 1
             save_users(users)
-        # якщо не ок – повідомлення вже надіслано всередині download_and_send
         return
 
-
+    # --- КОМАНДИ ---
     cmd = match_cmd(txt)
 
     if cmd == "menu":
@@ -446,7 +446,7 @@ def msg(m):
         return
 
     if cmd == "profile":
-        msg = (
+        msg_text = (
             f"👤 {t['profile']}\n\n"
             f"🆔 `{m.from_user.id}`\n"
             f"👋 {t['lbl_name']}: {u['name']}\n"
@@ -455,7 +455,7 @@ def msg(m):
             f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
             f"📅 {t['lbl_since']}: {u['joined']}\n"
         )
-        bot.send_message(m.chat.id, msg, parse_mode="Markdown", reply_markup=back_menu(lang))
+        bot.send_message(m.chat.id, msg_text, parse_mode="Markdown", reply_markup=back_menu(lang))
         return
 
     if cmd == "language":
@@ -487,6 +487,7 @@ def msg(m):
     bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
 
 
+
 # ============================================================
 #                     WEBHOOK
 # ============================================================
@@ -513,6 +514,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
