@@ -275,16 +275,17 @@ def match_cmd(text):
 
 
 # ============================================================
-#                 ЗАВАНТАЖЕННЯ ВІДЕО (ОНОВЛЕНО)
+#        YOUTUBE COOKIES + УНІВЕРСАЛЬНЕ ЗАВАНТАЖЕННЯ
 # ============================================================
 
-COOKIES_FILE = "cookies.txt"  # якщо колись додаси cookies – бот автоматично їх використає
+COOKIES_FILE = "cookies.txt"
 
 def _yt_base_args():
     args = ["yt-dlp"]
     if os.path.exists(COOKIES_FILE):
         args += ["--cookies", COOKIES_FILE]
     return args
+
 
 def download_and_send(url, chat_id, user, lang):
     fmt = user["format"]
@@ -302,6 +303,7 @@ def download_and_send(url, chat_id, user, lang):
             "--audio-quality", "0",
             url
         ]
+
         subprocess.run(cmd, check=True)
 
         audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
@@ -323,6 +325,7 @@ def download_and_send(url, chat_id, user, lang):
         "--merge-output-format", "mp4",
         url
     ]
+
     subprocess.run(cmd, check=True)
 
     video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
@@ -344,6 +347,7 @@ def download_and_send(url, chat_id, user, lang):
             "--audio-quality", "0",
             url
         ]
+
         subprocess.run(cmd, check=True)
 
         audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
@@ -484,6 +488,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
