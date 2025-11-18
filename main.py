@@ -274,10 +274,6 @@ def match_cmd(text):
     return None
 
 
-# ============================================================
-#        YOUTUBE COOKIES + УНІВЕРСАЛЬНЕ ЗАВАНТАЖЕННЯ
-# ============================================================
-
 COOKIES_FILE = "cookies.txt"
 
 def _yt_base_args():
@@ -290,43 +286,74 @@ def _yt_base_args():
 def download_and_send(url, chat_id, user, lang):
     fmt = user["format"]
 
+    def run_yt(extra_args):
+        cmd = _yt_base_args() + extra_args + [url]
+        try:
+            # capture_output, щоб ми могли подивитись текст помилки
+            res = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            return True, res
+        except subprocess.CalledProcessError as e:
+            err = (e.stderr or "") + "\n" + (e.stdout or "")
+            # найчастіші проблеми з YouTube
+            if "Sign in to confirm you’re not a bot" in err:
+                bot.send_message(
+                    chat_id,
+                    "❌ YouTube просить підтвердити, що це не бот (CAPTCHA).\n"
+                    "Бот не може обійти це обмеження. Спробуй інше відео або пізніше."
+                )
+                return False, err
+            if "cookies are no longer valid" in err:
+                bot.send_message(
+                    chat_id,
+                    "❌ Кукі YouTube більше не дійсні.\n"
+                    "Потрібно оновити cookies.txt, інакше деякі відео не будуть качатися."
+                )
+                return False, err
+            if "HTTP Error 429" in err:
+                bot.send_message(
+                    chat_id,
+                    "❌ YouTube тимчасово обмежив завантаження (помилка 429: Too Many Requests).\n"
+                    "Спробуй інше відео або зачекай трохи."
+                )
+                return False, err
+
+            # інша помилка
+            bot.send_message(chat_id, "❌ Сталася помилка при завантаженні відео.")
+            return False, err
+
     # --------------------------
     #    АУДІО ТІЛЬКИ (MP3)
     # --------------------------
     if fmt == "mp3":
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
-        cmd = _yt_base_args() + [
+        ok, _ = run_yt([
             "-o", audio_template,
             "-x",
             "--audio-format", "mp3",
             "--audio-quality", "0",
-            url
-        ]
-
-        subprocess.run(cmd, check=True)
+        ])
+        if not ok:
+            return False
 
         audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
         if audio_files:
             with open(audio_files[0], "rb") as f:
                 bot.send_audio(chat_id, f)
-
         return True
 
     # --------------------------
     #         ВІДЕО
     # --------------------------
-
     video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
 
-    cmd = _yt_base_args() + [
+    ok, _ = run_yt([
         "-o", video_template,
         "-f", "bestvideo*+bestaudio/best",
         "--merge-output-format", "mp4",
-        url
-    ]
-
-    subprocess.run(cmd, check=True)
+    ])
+    if not ok:
+        return False
 
     video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
     if video_files:
@@ -336,19 +363,17 @@ def download_and_send(url, chat_id, user, lang):
     # --------------------------
     #    ВІДЕО + ОКРЕМО АУДІО
     # --------------------------
-
     if user["video_plus_audio"]:
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
-        cmd = _yt_base_args() + [
+        ok, _ = run_yt([
             "-o", audio_template,
             "-x",
             "--audio-format", "mp3",
             "--audio-quality", "0",
-            url
-        ]
-
-        subprocess.run(cmd, check=True)
+        ])
+        if not ok:
+            return False
 
         audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
         if audio_files:
@@ -404,15 +429,15 @@ def msg(m):
     t = texts[lang]
     txt = (m.text or "").lower()
 
-    if txt.startswith("http"):
+        if txt.startswith("http"):
         bot.send_message(m.chat.id, "⏳ Завантаження…")
-        try:
-            download_and_send(m.text, m.chat.id, u, lang)
+        ok = download_and_send(m.text, m.chat.id, u, lang)
+        if ok:
             u["videos_downloaded"] += 1
             save_users(users)
-        except:
-            bot.send_message(m.chat.id, "❌ Помилка завантаження.")
+        # якщо не ок – повідомлення вже надіслано всередині download_and_send
         return
+
 
     cmd = match_cmd(txt)
 
@@ -488,6 +513,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
