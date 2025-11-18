@@ -275,37 +275,24 @@ def match_cmd(text):
 
 
 # ============================================================
-#                 ЗАВАНТАЖЕННЯ ВІДЕО
+#                 ЗАВАНТАЖЕННЯ ВІДЕО (ВИПРАВЛЕНО)
 # ============================================================
-
-def build_yt_cmd(url, fmt, out):
-    cmd = ["yt-dlp", "-o", out]
-
-    if fmt == "mp3":
-        cmd += ["-x", "--audio-format", "mp3"]
-    elif fmt == "webm":
-        cmd += ["-S", "ext:webm", "-f", "bv*+ba/b"]
-    else:
-        cmd += ["-S", "ext:mp4:m4a", "-f", "bv*+ba/b"]
-
-    cmd.append(url)
-    return cmd
-
 
 def download_and_send(url, chat_id, user, lang):
     fmt = user["format"]
 
-    # ==========================
-    #        АУДІО ТІЛЬКИ
-    # ==========================
+    # --------------------------
+    #    АУДІО ТІЛЬКИ (MP3)
+    # --------------------------
     if fmt == "mp3":
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
         subprocess.run([
             "yt-dlp",
+            "-o", audio_template,
             "-x",
             "--audio-format", "mp3",
-            "-o", audio_template,
+            "--audio-quality", "0",
             url
         ], check=True)
 
@@ -313,41 +300,43 @@ def download_and_send(url, chat_id, user, lang):
         if audio_files:
             with open(audio_files[0], "rb") as f:
                 bot.send_audio(chat_id, f)
+
         return True
 
-    # ==========================
-    #        ВІДЕО
-    # ==========================
+    # --------------------------
+    #         ВІДЕО
+    # --------------------------
 
-    # ПРАВИЛЬНА команда для будь-якого сайту:
-    # -f bestvideo+bestaudio OR best
     video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
 
+    # Головна правильна команда для ВСІХ сайтів:
     subprocess.run([
         "yt-dlp",
         "-o", video_template,
-        "-f", "bv*+ba/b",   # якщо є аудіо → об'єднає, якщо нема → візьме best
+        "-f", "bestvideo*+bestaudio/best",
+        "--merge-output-format", "mp4",
         url
     ], check=True)
 
-    # Знаходимо відеофайл
+    # Отримуємо відео
     video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
     if video_files:
         with open(video_files[0], "rb") as f:
             bot.send_video(chat_id, f)
 
-    # ==========================
-    #        АУДІО + ВІДЕО
-    # ==========================
+    # --------------------------
+    #    ВІДЕО + ОКРЕМО АУДІО
+    # --------------------------
 
     if user["video_plus_audio"]:
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
 
         subprocess.run([
             "yt-dlp",
+            "-o", audio_template,
             "-x",
             "--audio-format", "mp3",
-            "-o", audio_template,
+            "--audio-quality", "0",
             url
         ], check=True)
 
@@ -488,6 +477,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
