@@ -286,7 +286,7 @@ def _yt_base_args():
 def download_and_send(url, chat_id, user, lang):
     fmt = user["format"]
 
-        def run_yt(extra_args):
+    def run_yt(extra_args):
         # Анти-CAPTCHA режим: змінюємо клієнти YouTube + user-agent + IPv4
         fallback_clients = [
             "--youtube-client=android",
@@ -549,6 +549,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
