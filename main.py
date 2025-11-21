@@ -286,40 +286,75 @@ def _yt_base_args():
 def download_and_send(url, chat_id, user, lang):
     fmt = user["format"]
 
-    def run_yt(extra_args):
-        cmd = _yt_base_args() + extra_args + [url]
-        try:
-            # capture_output, щоб ми могли подивитись текст помилки
-            res = subprocess.run(cmd, check=True, capture_output=True, text=True)
-            return True, res
-        except subprocess.CalledProcessError as e:
-            err = (e.stderr or "") + "\n" + (e.stdout or "")
-            # найчастіші проблеми з YouTube
-            if "Sign in to confirm you’re not a bot" in err:
-                bot.send_message(
-                    chat_id,
-                    "❌ YouTube просить підтвердити, що це не бот (CAPTCHA).\n"
-                    "Бот не може обійти це обмеження. Спробуй інше відео або пізніше."
-                )
-                return False, err
-            if "cookies are no longer valid" in err:
-                bot.send_message(
-                    chat_id,
-                    "❌ Кукі YouTube більше не дійсні.\n"
-                    "Потрібно оновити cookies.txt, інакше деякі відео не будуть качатися."
-                )
-                return False, err
-            if "HTTP Error 429" in err:
-                bot.send_message(
-                    chat_id,
-                    "❌ YouTube тимчасово обмежив завантаження (помилка 429: Too Many Requests).\n"
-                    "Спробуй інше відео або зачекай трохи."
-                )
-                return False, err
+        def run_yt(extra_args):
+        # Анти-CAPTCHA режим: змінюємо клієнти YouTube + user-agent + IPv4
+        fallback_clients = [
+            "--youtube-client=android",
+            "--youtube-client=tv_html5",
+            "--youtube-client=ios",
+            "--youtube-client=safari",
+            "--youtube-client=web"
+        ]
 
-            # інша помилка
-            bot.send_message(chat_id, "❌ Сталася помилка при завантаженні відео.")
-            return False, err
+        user_agents = [
+            "Mozilla/5.0 (Linux; Android 12; SM-G998B)",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 15_2)",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_2)",
+            "Mozilla/5.0 (Linux; SmartTV; Tizen 6.5)"
+        ]
+
+        base = _yt_base_args() + ["--force-ipv4"]
+
+        last_error = None
+
+        for client in fallback_clients:
+            for ua in user_agents:
+
+                cmd = base + [
+                    "--user-agent", ua,
+                    client,
+                ] + extra_args + [url]
+
+                try:
+                    res = subprocess.run(
+                        cmd,
+                        check=True,
+                        capture_output=True,
+                        text=True
+                    )
+                    return True, res
+
+                except subprocess.CalledProcessError as e:
+                    last_error = (e.stderr or "") + "\n" + (e.stdout or "")
+                    # Продолжаем пробовать следующее сочетание UA + client
+                    continue
+
+        # Якщо всі клієнти заблоковані — показуємо загальне повідомлення
+        if last_error:
+            if "Sign in to confirm" in last_error:
+                bot.send_message(chat_id,
+                    "❌ YouTube включив CAPTCHA для цього відео.\n"
+                    "Спробуй інше або зачекай кілька хвилин."
+                )
+                return False, last_error
+
+            if "HTTP Error 429" in last_error:
+                bot.send_message(chat_id,
+                    "❌ YouTube тимчасово обмежив завантаження (429 Too Many Requests).\n"
+                    "Спробуй пізніше."
+                )
+                return False, last_error
+
+            if "cookies are no longer valid" in last_error:
+                bot.send_message(chat_id,
+                    "❌ Файл cookies.txt прострочений. Онови його."
+                )
+                return False, last_error
+
+        bot.send_message(chat_id, "❌ Не вдалося скачати відео.")
+        return False, last_error
+
 
     # --------------------------
     #    АУДІО ТІЛЬКИ (MP3)
@@ -514,6 +549,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
