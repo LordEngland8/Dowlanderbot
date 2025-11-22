@@ -104,9 +104,10 @@ def match_cmd(text):
     text = clean_text(text)
     for cmd, variants in CMD.items():
         for v in variants:
-            if text == clean_text(v):
+            if clean_text(v) in text:   # 🔥 працює як раніше
                 return cmd
     return None
+
 
 
 # ============================================================
@@ -590,5 +591,6 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
