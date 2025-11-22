@@ -269,15 +269,16 @@ def msg(m):
         return
 
     if cmd == "language":
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
-    kb.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
-    kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
-    kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
-    kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
+        kb.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+        kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
+        kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
+        kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
 
-    bot.send_message(m.chat.id, "🌍 Обери мову:", reply_markup=kb)
-    return
+        bot.send_message(m.chat.id, "🌍 Обери мову:", reply_markup=kb)
+        return
+
 
 
     if cmd == "settings":
@@ -326,4 +327,5 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
