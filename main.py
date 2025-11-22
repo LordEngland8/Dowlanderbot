@@ -42,10 +42,13 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 def load_users():
     return json.load(open(USER_FILE, "r", encoding="utf-8")) if os.path.exists(USER_FILE) else {}
 
+
 def save_users(data):
     json.dump(data, open(USER_FILE, "w", encoding="utf-8"), indent=4, ensure_ascii=False)
 
+
 users = load_users()
+
 
 def get_user(u):
     uid = str(u.id)
@@ -91,16 +94,17 @@ CMD = {
     "menu": ["меню", "menu", "menü"],
     "profile": ["профіль", "проф", "profile", "profil"],
     "settings": [
-        "налаштування", "налаш", "настройки",   # 🇺🇦/🇷🇺
-        "settings",                             # 🇬🇧
-        "einstellungen",                        # 🇩🇪
-        "paramètres", "parametre"               # 🇫🇷
+        "налаштування", "налаш", "настройки",
+        "settings",
+        "einstellungen",
+        "paramètres", "parametre"
     ],
     "language": ["мова", "язык", "language", "langue", "sprache"],
     "subscription": ["підпис", "подпис", "subscription", "abonnement", "mitgliedschaft"],
     "help": ["про бота", "help", "about", "à propos", "über bot"],
     "back": ["назад", "back", "retour", "zurück", "⬅️"],
 }
+
 
 def match_cmd(text):
     text = clean_text(text)
@@ -118,19 +122,19 @@ def match_cmd(text):
 def main_menu(lang):
     t = texts[lang]
 
-    # Інлайн меню як на скріні: 3 рядки по 2 кнопки
+    # Інлайн меню: 3 рядки по 2 кнопки
     kb = types.InlineKeyboardMarkup(row_width=2)
     kb.row(
         types.InlineKeyboardButton(f"📋 {t['menu']}", callback_data="cmd_menu"),
-        types.InlineKeyboardButton(f"👤 {t['profile']}", callback_data="cmd_profile")
+        types.InlineKeyboardButton(f"👤 {t['profile']}", callback_data="cmd_profile"),
     )
     kb.row(
         types.InlineKeyboardButton(f"⚙️ {t['settings']}", callback_data="cmd_settings"),
-        types.InlineKeyboardButton(f"🌍 {t['language']}", callback_data="cmd_language")
+        types.InlineKeyboardButton(f"🌍 {t['language']}", callback_data="cmd_language"),
     )
     kb.row(
         types.InlineKeyboardButton(f"💎 {t['subscription']}", callback_data="cmd_sub"),
-        types.InlineKeyboardButton(f"ℹ️ {t['help']}", callback_data="cmd_help")
+        types.InlineKeyboardButton(f"ℹ️ {t['help']}", callback_data="cmd_help"),
     )
 
     return kb
@@ -156,7 +160,6 @@ def settings_keyboard(user):
         )
     )
 
-    # Кнопка "назад" – повертає в головне меню
     kb.add(types.InlineKeyboardButton("⬅ " + t["back"], callback_data="cmd_back"))
 
     return kb
@@ -172,9 +175,7 @@ def callback(c):
     lang = user["language"]
     t = texts[lang]
 
-    # одна загальна відповідь, щоб не було "query is too old"
     bot.answer_callback_query(c.id)
-
     data = c.data
 
     # ---------- КОМАНДИ МЕНЮ (інлайн кнопки) ----------
@@ -192,11 +193,20 @@ def callback(c):
             f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if user['video_plus_audio'] else t['no']}\n"
             f"📅 {t['lbl_since']}: {user['joined']}\n"
         )
-        bot.send_message(c.message.chat.id, msg_text, parse_mode="Markdown", reply_markup=main_menu(lang))
+        bot.send_message(
+            c.message.chat.id,
+            msg_text,
+            parse_mode="Markdown",
+            reply_markup=main_menu(lang),
+        )
         return
 
     if data == "cmd_settings":
-        bot.send_message(c.message.chat.id, f"⚙️ {t['settings']}:", reply_markup=settings_keyboard(user))
+        bot.send_message(
+            c.message.chat.id,
+            f"⚙️ {t['settings']}:",
+            reply_markup=settings_keyboard(user),
+        )
         return
 
     if data == "cmd_language":
@@ -206,7 +216,6 @@ def callback(c):
         kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
         kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
         kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
-
         bot.send_message(c.message.chat.id, t["language"], reply_markup=kb)
         return
 
@@ -230,18 +239,17 @@ def callback(c):
             save_users(users)
 
             t_new = texts[new_lang]
-            # показуємо тост "мова збережена"
             bot.answer_callback_query(c.id, t_new["lang_saved"])
-            # видаляємо старе повідомлення з вибором мови (не критично, але красиво)
+
             try:
                 bot.delete_message(c.message.chat.id, c.message.message_id)
             except:
                 pass
-            # надсилаємо привітання + меню
+
             bot.send_message(
                 c.message.chat.id,
                 t_new["welcome"],
-                reply_markup=main_menu(new_lang)
+                reply_markup=main_menu(new_lang),
             )
         return
 
@@ -256,7 +264,7 @@ def callback(c):
         bot.edit_message_reply_markup(
             c.message.chat.id,
             c.message.message_id,
-            reply_markup=settings_keyboard(user)
+            reply_markup=settings_keyboard(user),
         )
         return
 
@@ -269,7 +277,7 @@ def callback(c):
         bot.edit_message_reply_markup(
             c.message.chat.id,
             c.message.message_id,
-            reply_markup=settings_keyboard(user)
+            reply_markup=settings_keyboard(user),
         )
         return
 
@@ -281,20 +289,16 @@ def callback(c):
 def download_from_url(url, chat_id, user, lang):
     t = texts[lang]
 
-    # YouTube – блокуємо
     if "youtube.com" in url or "youtu.be" in url:
         bot.send_message(chat_id, t["yt_disabled"])
         return False
 
-    # TikTok (кастом)
     if "tiktok.com" in url:
         return download_tiktok(url, chat_id, user, lang)
 
-    # Instagram (кастом)
     if "instagram.com" in url:
         return download_instagram(url, chat_id, user, lang)
 
-    # Все інше – generic через yt-dlp
     return download_generic(url, chat_id, user, lang)
 
 
@@ -311,7 +315,7 @@ def download_tiktok(url, chat_id, user, lang):
         "--no-check-certificates",
         "--referer", "https://www.tiktok.com/",
         "-o", template,
-        url
+        url,
     ]
 
     if fmt == "mp3":
@@ -341,12 +345,10 @@ def download_tiktok(url, chat_id, user, lang):
     video_exts = (".mp4", ".webm", ".mov", ".mkv")
     image_exts = (".jpg", ".jpeg", ".png", ".webp")
 
-    # Якщо формат mp3 → шукаємо аудіо
     if fmt == "mp3":
         audio_path = None
         for path in files:
-            ext = os.path.splitext(path)[1].lower()
-            if ext in audio_exts:
+            if os.path.splitext(path)[1].lower() in audio_exts:
                 audio_path = path
                 break
         if audio_path:
@@ -359,19 +361,15 @@ def download_tiktok(url, chat_id, user, lang):
         _cleanup_files(files)
         return False
 
-    # Відео
     video_path = None
     for path in files:
-        ext = os.path.splitext(path)[1].lower()
-        if ext in video_exts:
+        if os.path.splitext(path)[1].lower() in video_exts:
             video_path = path
             break
 
-    # Аудіо для "відео + аудіо"
     audio_path = None
     for path in files:
-        ext = os.path.splitext(path)[1].lower()
-        if ext in audio_exts:
+        if os.path.splitext(path)[1].lower() in audio_exts:
             audio_path = path
             break
 
@@ -379,7 +377,6 @@ def download_tiktok(url, chat_id, user, lang):
         with open(video_path, "rb") as f:
             bot.send_video(chat_id, f)
 
-        # якщо опція "відео + аудіо" включена – шлемо ще й аудіо, якщо є
         if user.get("video_plus_audio") and audio_path:
             with open(audio_path, "rb") as f:
                 bot.send_audio(chat_id, f)
@@ -387,7 +384,6 @@ def download_tiktok(url, chat_id, user, lang):
         _cleanup_files(files)
         return True
 
-    # Якщо відео нема – пробуємо картинки (TikTok photo post)
     img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
     if img_paths:
         if len(img_paths) == 1:
@@ -422,7 +418,7 @@ def download_instagram(url, chat_id, user, lang):
         "--force-ipv4",
         "--no-check-certificates",
         "-o", template,
-        url
+        url,
     ]
 
     if fmt == "mp3":
@@ -468,7 +464,6 @@ def download_instagram(url, chat_id, user, lang):
         _cleanup_files(files)
         return False
 
-    # відео
     video_path = None
     for path in files:
         if os.path.splitext(path)[1].lower() in video_exts:
@@ -481,7 +476,6 @@ def download_instagram(url, chat_id, user, lang):
         _cleanup_files(files)
         return True
 
-    # картинки (якщо фото-пост)
     img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
     if img_paths:
         if len(img_paths) == 1:
@@ -516,7 +510,7 @@ def download_generic(url, chat_id, user, lang):
         "--force-ipv4",
         "--no-check-certificates",
         "-o", template,
-        url
+        url,
     ]
 
     if fmt == "mp3":
@@ -530,7 +524,7 @@ def download_generic(url, chat_id, user, lang):
             "-f", "bestvideo*+bestaudio/best",
             "--merge-output-format", "webm",
         ]
-    else:  # mp4
+    else:
         cmd += [
             "-f", "bestvideo*+bestaudio/best",
             "--merge-output-format", "mp4",
@@ -621,7 +615,7 @@ def msg(m):
             save_users(users)
         return
 
-    # -------- Команди через текст --------
+    # -------- Команди через текст (/menu, меню, menu...) --------
     cmd = match_cmd(txt)
 
     if cmd == "menu":
@@ -629,15 +623,20 @@ def msg(m):
         return
 
     if cmd == "profile":
-        bot.send_message(m.chat.id, (
-            f"👤 {t['profile']}\n\n"
-            f"🆔 `{m.from_user.id}`\n"
-            f"👋 {t['lbl_name']}: {u['name']}\n"
-            f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
-            f"🎞️ {t['lbl_format']}: {u['format'].upper()}\n"
-            f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
-            f"📅 {t['lbl_since']}: {u['joined']}\n"
-        ), parse_mode="Markdown", reply_markup=main_menu(lang))
+        bot.send_message(
+            m.chat.id,
+            (
+                f"👤 {t['profile']}\n\n"
+                f"🆔 `{m.from_user.id}`\n"
+                f"👋 {t['lbl_name']}: {u['name']}\n"
+                f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
+                f"🎞️ {t['lbl_format']}: {u['format'].upper()}\n"
+                f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
+                f"📅 {t['lbl_since']}: {u['joined']}\n"
+            ),
+            parse_mode="Markdown",
+            reply_markup=main_menu(lang),
+        )
         return
 
     if cmd == "language":
@@ -662,8 +661,58 @@ def msg(m):
         bot.send_message(m.chat.id, t["help_text"], reply_markup=main_menu(lang))
         return
 
-    # Невідоме повідомлення
     bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
+
+
+# ============================================================
+#           КОМАНДИ ДЛЯ КНОПКИ-МЕНЮ В ПОЛІ ВВОДУ
+# ============================================================
+
+def setup_bot_commands():
+    # 🇺🇦 Українська
+    bot.set_my_commands([
+        types.BotCommand("menu", "Відкрити меню"),
+        types.BotCommand("profile", "Показати профіль"),
+        types.BotCommand("settings", "Налаштування завантажень"),
+        types.BotCommand("language", "Змінити мову"),
+        types.BotCommand("help", "Про бота"),
+    ], language_code="uk")
+
+    # 🇬🇧 English
+    bot.set_my_commands([
+        types.BotCommand("menu", "Open menu"),
+        types.BotCommand("profile", "Show profile"),
+        types.BotCommand("settings", "Download settings"),
+        types.BotCommand("language", "Change language"),
+        types.BotCommand("help", "About bot"),
+    ], language_code="en")
+
+    # 🇷🇺 Russian
+    bot.set_my_commands([
+        types.BotCommand("menu", "Открыть меню"),
+        types.BotCommand("profile", "Показать профиль"),
+        types.BotCommand("settings", "Настройки загрузки"),
+        types.BotCommand("language", "Сменить язык"),
+        types.BotCommand("help", "О боте"),
+    ], language_code="ru")
+
+    # 🇫🇷 French
+    bot.set_my_commands([
+        types.BotCommand("menu", "Ouvrir le menu"),
+        types.BotCommand("profile", "Voir le profil"),
+        types.BotCommand("settings", "Paramètres de téléchargement"),
+        types.BotCommand("language", "Changer de langue"),
+        types.BotCommand("help", "À propos du bot"),
+    ], language_code="fr")
+
+    # 🇩🇪 German
+    bot.set_my_commands([
+        types.BotCommand("menu", "Menü öffnen"),
+        types.BotCommand("profile", "Profil anzeigen"),
+        types.BotCommand("settings", "Download-Einstellungen"),
+        types.BotCommand("language", "Sprache ändern"),
+        types.BotCommand("help", "Über den Bot"),
+    ], language_code="de")
 
 
 # ============================================================
@@ -673,6 +722,7 @@ def msg(m):
 @app.route("/", methods=["GET"])
 def home():
     return "Bot is running!"
+
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook_receiver():
@@ -687,6 +737,8 @@ def webhook_receiver():
 
 if __name__ == "__main__":
     print("🚀 Запуск Flask + Webhook")
+
+    setup_bot_commands()  # ← включає меню біля поля вводу
 
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
