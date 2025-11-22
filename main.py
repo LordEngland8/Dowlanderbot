@@ -522,47 +522,48 @@ def msg(m):
         bot.send_message(m.chat.id, t["enter_url"], reply_markup=main_menu(lang))
         return
 
-    if cmd == "profile":
-        msg_text = (
-            f"👤 {t['profile']}\n\n"
-            f"🆔 `{m.from_user.id}`\n"
-            f"👋 {t['lbl_name']}: {u['name']}\n"
-            f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
-            f"🎞️ {t['lbl_format']}: {u['format'].upper()}\n"
-            f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
-            f"📅 {t['lbl_since']}: {u['joined']}\n"
-        )
-        bot.send_message(m.chat.id, msg_text, parse_mode="Markdown", reply_markup=back_menu(lang))
-        return
+    if cmd == "menu":
+    bot.send_message(m.chat.id, t["enter_url"])
+    return
 
-    if cmd == "language":
-        kb = types.InlineKeyboardMarkup()
-        kb.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
-        kb.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
-        kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
-        kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
-        kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
+if cmd == "profile":
+    bot.send_message(m.chat.id, (
+        f"👤 {t['profile']}\n\n"
+        f"🆔 `{m.from_user.id}`\n"
+        f"👋 {t['lbl_name']}: {u['name']}\n"
+        f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
+        f"🎞️ {t['lbl_format']}: {u['format'].upper()}\n"
+        f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
+        f"📅 {t['lbl_since']}: {u['joined']}\n"
+    ), parse_mode="Markdown")
+    return
 
-        bot.send_message(m.chat.id, t["language"], reply_markup=kb)
-        return
+if cmd == "language":
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
+    kb.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+    kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
+    kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
+    kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
 
-    if cmd == "settings":
-        bot.send_message(m.chat.id, f"⚙️ {t['settings']}:", reply_markup=settings_keyboard(u))
-        return
+    bot.send_message(m.chat.id, t["language"], reply_markup=kb)
+    return
 
-    if cmd == "subscription":
-        bot.send_message(m.chat.id, t["free_version"], reply_markup=back_menu(lang))
-        return
+if cmd == "settings":
+    bot.send_message(m.chat.id, f"⚙️ {t['settings']}:", reply_markup=settings_keyboard(u))
+    return
 
-    if cmd == "help":
-        bot.send_message(m.chat.id, t["help_text"], reply_markup=back_menu(lang))
-        return
+if cmd == "subscription":
+    bot.send_message(m.chat.id, t["free_version"])
+    return
 
-    if cmd == "back":
-        bot.send_message(m.chat.id, t["enter_url"], reply_markup=main_menu(lang))
-        return
+if cmd == "help":
+    bot.send_message(m.chat.id, t["help_text"])
+    return
 
-    bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
+# Default
+bot.send_message(m.chat.id, t["not_understood"])
+
 
 
 # ============================================================
@@ -591,6 +592,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
