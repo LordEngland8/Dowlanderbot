@@ -116,14 +116,25 @@ def match_cmd(text):
 
 def main_menu(lang):
     t = texts[lang]
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton(f"📋 {t['menu']}", callback_data="cmd_menu"))
-    kb.add(types.InlineKeyboardButton(f"👤 {t['profile']}", callback_data="cmd_profile"))
-    kb.add(types.InlineKeyboardButton(f"⚙️ {t['settings']}", callback_data="cmd_settings"))
-    kb.add(types.InlineKeyboardButton(f"🌍 {t['language']}", callback_data="cmd_language"))
-    kb.add(types.InlineKeyboardButton(f"💎 {t['subscription']}", callback_data="cmd_sub"))
-    kb.add(types.InlineKeyboardButton(f"ℹ️ {t['help']}", callback_data="cmd_help"))
+    kb = types.InlineKeyboardMarkup(row_width=2)
+
+    kb.row(
+        types.InlineKeyboardButton(f"📋 {t['menu']}", callback_data="cmd_menu"),
+        types.InlineKeyboardButton(f"👤 {t['profile']}", callback_data="cmd_profile")
+    )
+
+    kb.row(
+        types.InlineKeyboardButton(f"⚙️ {t['settings']}", callback_data="cmd_settings"),
+        types.InlineKeyboardButton(f"🌍 {t['language']}", callback_data="cmd_language")
+    )
+
+    kb.row(
+        types.InlineKeyboardButton(f"💎 {t['subscription']}", callback_data="cmd_sub"),
+        types.InlineKeyboardButton(f"ℹ️ {t['help']}", callback_data="cmd_help")
+    )
+
     return kb
+
 
 
 
@@ -591,6 +602,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
