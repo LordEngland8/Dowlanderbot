@@ -283,78 +283,131 @@ def _yt_base_args():
     return args
 
 
-def download_and_send(url, chat_id, user, lang):
+def download_from_url(url, chat_id, user):
+    import re
+
+    # YouTube
+    if "youtube.com" in url or "youtu.be" in url:
+        return download_youtube(url, chat_id, user)
+
+    # TikTok
+    if "tiktok.com" in url:
+        return download_tiktok(url, chat_id)
+
+    # Instagram Reels
+    if "instagram.com" in url and "/reel/" in url:
+        return download_instagram(url, chat_id)
+
+    bot.send_message(chat_id, "❌ Платформа не підтримується.")
+    return False
+
+
+# =============================== YOUTUBE ===============================
+
+def download_youtube(url, chat_id, user):
     fmt = user["format"]
+    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
 
-    def run_yt(extra_args):
-        # Анти-CAPTCHA режим: змінюємо клієнти YouTube + user-agent + IPv4
-        fallback_clients = [
-            "--youtube-client=android",
-            "--youtube-client=tv_html5",
-            "--youtube-client=ios",
-            "--youtube-client=safari",
-            "--youtube-client=web"
+    base = ["yt-dlp", "--force-ipv4"]
+
+    # Cookies якщо є
+    if os.path.exists("cookies.txt"):
+        base += ["--cookies", "cookies.txt"]
+
+    # fallback клієнти (анти-CAPTCHA)
+    clients = [
+        "--youtube-client=android",
+        "--youtube-client=tv",
+        "--youtube-client=ios",
+        "--youtube-client=web",
+    ]
+
+    for client in clients:
+        cmd = base + [
+            client,
+            "-o", video_template,
+            "-f", "bestvideo*+bestaudio/best",
+            "--merge-output-format", "mp4",
+            url
         ]
 
-        user_agents = [
-            "Mozilla/5.0 (Linux; Android 12; SM-G998B)",
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 15_2)",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_2)",
-            "Mozilla/5.0 (Linux; SmartTV; Tizen 6.5)"
-        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            break
+        except subprocess.CalledProcessError as e:
+            err = e.stderr or e.stdout
+            if "Sign in to confirm" in err:
+                continue
+            if "HTTP Error 429" in err:
+                bot.send_message(chat_id, "⚠ YouTube обмежив доступ, спробуйте пізніше.")
+                return False
+    else:
+        bot.send_message(chat_id, "❌ YouTube не дозволяє скачати це відео.")
+        return False
 
-        base = _yt_base_args() + ["--force-ipv4"]
+    # Надсилаємо відео
+    file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
+    if file:
+        with open(file[0], "rb") as f:
+            bot.send_video(chat_id, f)
 
-        last_error = None
+    return True
 
-        for client in fallback_clients:
-            for ua in user_agents:
 
-                cmd = base + [
-                    "--user-agent", ua,
-                    client,
-                ] + extra_args + [url]
+# =============================== TIKTOK ===============================
 
-                try:
-                    res = subprocess.run(
-                        cmd,
-                        check=True,
-                        capture_output=True,
-                        text=True
-                    )
-                    return True, res
+def download_tiktok(url, chat_id):
+    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.%(ext)s")
 
-                except subprocess.CalledProcessError as e:
-                    last_error = (e.stderr or "") + "\n" + (e.stdout or "")
-                    # Продолжаем пробовать следующее сочетание UA + client
-                    continue
+    cmd = [
+        "yt-dlp",
+        "--force-ipv4",
+        "--no-check-certificates",
+        "--referer", "https://www.tiktok.com/",
+        "-o", video_template,
+        "-f", "bv*+ba/best",
+        url
+    ]
 
-        # Якщо всі клієнти заблоковані — показуємо загальне повідомлення
-        if last_error:
-            if "Sign in to confirm" in last_error:
-                bot.send_message(chat_id,
-                    "❌ YouTube включив CAPTCHA для цього відео.\n"
-                    "Спробуй інше або зачекай кілька хвилин."
-                )
-                return False, last_error
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        bot.send_message(chat_id, "❌ TikTok не дозволив скачати відео.")
+        return False
 
-            if "HTTP Error 429" in last_error:
-                bot.send_message(chat_id,
-                    "❌ YouTube тимчасово обмежив завантаження (429 Too Many Requests).\n"
-                    "Спробуй пізніше."
-                )
-                return False, last_error
+    file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.*"))
+    if file:
+        with open(file[0], "rb") as f:
+            bot.send_video(chat_id, f)
+    return True
 
-            if "cookies are no longer valid" in last_error:
-                bot.send_message(chat_id,
-                    "❌ Файл cookies.txt прострочений. Онови його."
-                )
-                return False, last_error
 
-        bot.send_message(chat_id, "❌ Не вдалося скачати відео.")
-        return False, last_error
+# =============================== INSTAGRAM ===============================
 
+def download_instagram(url, chat_id):
+    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.%(ext)s")
+
+    cmd = [
+        "yt-dlp",
+        "--force-ipv4",
+        "--no-check-certificates",
+        "-o", video_template,
+        "-f", "mp4",
+        url
+    ]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError:
+        bot.send_message(chat_id, "❌ Instagram заблокував завантаження.")
+        return False
+
+    file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.*"))
+    if file:
+        with open(file[0], "rb") as f:
+            bot.send_video(chat_id, f)
+    return True
+        
 
     # --------------------------
     #    АУДІО ТІЛЬКИ (MP3)
@@ -464,14 +517,24 @@ def msg(m):
     t = texts[lang]
     txt = (m.text or "").lower()
 
-    # --- ОБРОБКА ПОСИЛАННЯ ---
+      # --- ОБРОБКА ПОСИЛАННЯ ---
     if txt.startswith("http"):
         bot.send_message(m.chat.id, "⏳ Завантаження…")
-        ok = download_and_send(m.text, m.chat.id, u, lang)
+
+        ok, result = download_and_send(m.text, m.chat.id, u, lang)
+
         if ok:
             u["videos_downloaded"] += 1
             save_users(users)
+        else:
+            # Якщо завантаження не вдалося
+            bot.send_message(m.chat.id,
+                "❌ Не вдалося скачати відео.\n"
+                "🔄 Спробуй інше посилання або увімкни Cookies/анти-CAPTCHA у налаштуваннях."
+            )
+
         return
+
 
     # --- КОМАНДИ ---
     cmd = match_cmd(txt)
@@ -549,6 +612,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
