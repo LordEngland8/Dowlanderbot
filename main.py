@@ -116,29 +116,8 @@ def match_cmd(text):
 
 
 # ============================================================
-#                 КЛАВІАТУРИ
+#                 КЛАВІАТУРИ (тільки INLINE)
 # ============================================================
-
-def main_menu(lang):
-    t = texts[lang]
-
-    # Інлайн меню: 3 рядки по 2 кнопки
-    kb = types.InlineKeyboardMarkup(row_width=2)
-    kb.row(
-        types.InlineKeyboardButton(f"📋 {t['menu']}", callback_data="cmd_menu"),
-        types.InlineKeyboardButton(f"👤 {t['profile']}", callback_data="cmd_profile"),
-    )
-    kb.row(
-        types.InlineKeyboardButton(f"⚙️ {t['settings']}", callback_data="cmd_settings"),
-        types.InlineKeyboardButton(f"🌍 {t['language']}", callback_data="cmd_language"),
-    )
-    kb.row(
-        types.InlineKeyboardButton(f"💎 {t['subscription']}", callback_data="cmd_sub"),
-        types.InlineKeyboardButton(f"ℹ️ {t['help']}", callback_data="cmd_help"),
-    )
-
-    return kb
-
 
 def settings_keyboard(user):
     lang = user["language"]
@@ -180,7 +159,7 @@ def callback(c):
 
     # ---------- КОМАНДИ МЕНЮ (інлайн кнопки) ----------
     if data == "cmd_menu":
-        bot.send_message(c.message.chat.id, t["enter_url"], reply_markup=main_menu(lang))
+        bot.send_message(c.message.chat.id, t["enter_url"])
         return
 
     if data == "cmd_profile":
@@ -197,7 +176,6 @@ def callback(c):
             c.message.chat.id,
             msg_text,
             parse_mode="Markdown",
-            reply_markup=main_menu(lang),
         )
         return
 
@@ -220,15 +198,15 @@ def callback(c):
         return
 
     if data == "cmd_sub":
-        bot.send_message(c.message.chat.id, t["free_version"], reply_markup=main_menu(lang))
+        bot.send_message(c.message.chat.id, t["free_version"])
         return
 
     if data == "cmd_help":
-        bot.send_message(c.message.chat.id, t["help_text"], reply_markup=main_menu(lang))
+        bot.send_message(c.message.chat.id, t["help_text"])
         return
 
     if data == "cmd_back":
-        bot.send_message(c.message.chat.id, t["enter_url"], reply_markup=main_menu(lang))
+        bot.send_message(c.message.chat.id, t["enter_url"])
         return
 
     # ---------- ЗМІНА МОВИ ----------
@@ -249,7 +227,6 @@ def callback(c):
             bot.send_message(
                 c.message.chat.id,
                 t_new["welcome"],
-                reply_markup=main_menu(new_lang),
             )
         return
 
@@ -593,7 +570,7 @@ def _cleanup_files(files):
 def start(m):
     u = get_user(m.from_user)
     lang = u["language"]
-    bot.send_message(m.chat.id, texts[lang]["welcome"], reply_markup=main_menu(lang))
+    bot.send_message(m.chat.id, texts[lang]["welcome"])
 
 
 @bot.message_handler(func=lambda m: True)
@@ -619,7 +596,7 @@ def msg(m):
     cmd = match_cmd(txt)
 
     if cmd == "menu":
-        bot.send_message(m.chat.id, t["enter_url"], reply_markup=main_menu(lang))
+        bot.send_message(m.chat.id, t["enter_url"])
         return
 
     if cmd == "profile":
@@ -635,7 +612,6 @@ def msg(m):
                 f"📅 {t['lbl_since']}: {u['joined']}\n"
             ),
             parse_mode="Markdown",
-            reply_markup=main_menu(lang),
         )
         return
 
@@ -654,14 +630,14 @@ def msg(m):
         return
 
     if cmd == "subscription":
-        bot.send_message(m.chat.id, t["free_version"], reply_markup=main_menu(lang))
+        bot.send_message(m.chat.id, t["free_version"])
         return
 
     if cmd == "help":
-        bot.send_message(m.chat.id, t["help_text"], reply_markup=main_menu(lang))
+        bot.send_message(m.chat.id, t["help_text"])
         return
 
-    bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
+    bot.send_message(m.chat.id, t["not_understood"])
 
 
 # ============================================================
@@ -669,50 +645,16 @@ def msg(m):
 # ============================================================
 
 def setup_bot_commands():
-    # 🇺🇦 Українська
-    bot.set_my_commands([
-        types.BotCommand("menu", "Відкрити меню"),
-        types.BotCommand("profile", "Показати профіль"),
-        types.BotCommand("settings", "Налаштування завантажень"),
-        types.BotCommand("language", "Змінити мову"),
-        types.BotCommand("help", "Про бота"),
-    ], language_code="uk")
+    for lang in texts.keys():
+        bot.set_my_commands([
+            types.BotCommand("menu", f"📋 {texts[lang]['menu']}"),
+            types.BotCommand("profile", f"👤 {texts[lang]['profile']}"),
+            types.BotCommand("settings", f"⚙ {texts[lang]['settings']}"),
+            types.BotCommand("language", f"🌍 {texts[lang]['language']}"),
+            types.BotCommand("subscription", f"💎 {texts[lang]['subscription']}"),
+            types.BotCommand("help", f"ℹ {texts[lang]['help']}"),
+        ], language_code=lang)
 
-    # 🇬🇧 English
-    bot.set_my_commands([
-        types.BotCommand("menu", "Open menu"),
-        types.BotCommand("profile", "Show profile"),
-        types.BotCommand("settings", "Download settings"),
-        types.BotCommand("language", "Change language"),
-        types.BotCommand("help", "About bot"),
-    ], language_code="en")
-
-    # 🇷🇺 Russian
-    bot.set_my_commands([
-        types.BotCommand("menu", "Открыть меню"),
-        types.BotCommand("profile", "Показать профиль"),
-        types.BotCommand("settings", "Настройки загрузки"),
-        types.BotCommand("language", "Сменить язык"),
-        types.BotCommand("help", "О боте"),
-    ], language_code="ru")
-
-    # 🇫🇷 French
-    bot.set_my_commands([
-        types.BotCommand("menu", "Ouvrir le menu"),
-        types.BotCommand("profile", "Voir le profil"),
-        types.BotCommand("settings", "Paramètres de téléchargement"),
-        types.BotCommand("language", "Changer de langue"),
-        types.BotCommand("help", "À propos du bot"),
-    ], language_code="fr")
-
-    # 🇩🇪 German
-    bot.set_my_commands([
-        types.BotCommand("menu", "Menü öffnen"),
-        types.BotCommand("profile", "Profil anzeigen"),
-        types.BotCommand("settings", "Download-Einstellungen"),
-        types.BotCommand("language", "Sprache ändern"),
-        types.BotCommand("help", "Über den Bot"),
-    ], language_code="de")
 
 
 # ============================================================
