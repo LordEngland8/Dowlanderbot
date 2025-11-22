@@ -682,6 +682,9 @@ if __name__ == "__main__":
 
     setup_bot_commands()  # ← включає меню біля поля вводу
 
+    # 🔥 ДОДАНО: менюшка справа
+    bot.set_chat_menu_button(types.MenuButtonCommands())
+
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
 
