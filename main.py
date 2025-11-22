@@ -2,6 +2,7 @@ import os
 import json
 import glob
 import subprocess
+import re
 from datetime import datetime
 
 from telebot import TeleBot, types
@@ -11,7 +12,7 @@ from flask import Flask, request
 #                     ПІДКЛЮЧЕННЯ МОВ
 # ============================================================
 
-from languages import texts   # <--- ВАЖЛИВО
+from languages import texts   # <--- твої мови
 
 
 # ============================================================
@@ -41,13 +42,10 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 def load_users():
     return json.load(open(USER_FILE, "r", encoding="utf-8")) if os.path.exists(USER_FILE) else {}
 
-
 def save_users(data):
     json.dump(data, open(USER_FILE, "w", encoding="utf-8"), indent=4, ensure_ascii=False)
 
-
 users = load_users()
-
 
 def get_user(u):
     uid = str(u.id)
@@ -59,7 +57,7 @@ def get_user(u):
             "videos_downloaded": 0,
             "joined": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "language": "uk",
-            "format": "mp4",          # mp4 / mp3 / webm
+            "format": "mp4",
             "audio_only": False,
             "video_plus_audio": True
         }
@@ -70,6 +68,39 @@ def get_user(u):
         save_users(users)
 
     return users[uid]
+
+
+# ============================================================
+#                 ОЧИЩЕННЯ ТЕКСТУ (ГОЛОВНЕ!)
+# ============================================================
+
+def clean_text(text):
+    # прибираємо емодзі та зайві символи
+    return re.sub(r"[^a-zA-Zа-яА-ЯёЁіІїЇєЄçÇčČšŠğĞüÜöÖâÂêÊôÔùÙàÀéÉ0-9 ]", "", text).strip().lower()
+
+
+# ============================================================
+#            АЛІАСИ КОМАНД (ОНОВЛЕНІ)
+# ============================================================
+
+CMD = {
+    "menu": ["меню", "menu", "accueil"],
+    "profile": ["профіль", "проф", "profile", "profil"],
+    "settings": ["налаштування", "settings", "parametres", "paramètres"],
+    "language": ["мова", "language", "язык", "langue"],
+    "subscription": ["підписка", "subscription", "abonnement"],
+    "help": ["про бота", "help", "about", "aide"],
+    "back": ["назад", "back", "retour"]
+}
+
+
+def match_cmd(text):
+    text = clean_text(text)
+    for cmd, variants in CMD.items():
+        for v in variants:
+            if text == clean_text(v):
+                return cmd
+    return None
 
 
 # ============================================================
@@ -104,42 +135,13 @@ def settings_keyboard(user):
     kb.add(types.InlineKeyboardButton("WEBM", callback_data="format_webm"))
 
     vpa_state = f"✅ {t['yes']}" if user["video_plus_audio"] else f"❌ {t['no']}"
-    kb.add(
-        types.InlineKeyboardButton(
-            f"{t['lbl_video_plus_audio']}: {vpa_state}",
-            callback_data="toggle_vpa",
-        )
-    )
+    kb.add(types.InlineKeyboardButton(f"{t['lbl_video_plus_audio']}: {vpa_state}", callback_data="toggle_vpa"))
 
     return kb
 
 
 # ============================================================
-#            АЛІАСИ КОМАНД
-# ============================================================
-
-CMD = {
-    "menu": ["меню", "menu"],
-    "profile": ["профіль", "проф", "profile"],
-    "settings": ["налаш", "настройки", "settings", "setting"],
-    "language": ["мова", "язык", "language"],
-    "subscription": ["підпис", "подпис", "subscription"],
-    "help": ["про бота", "help", "about"],
-    "back": ["назад", "back", "⬅️"],
-}
-
-
-def match_cmd(text):
-    text = text.lower()
-    for cmd, variants in CMD.items():
-        for v in variants:
-            if v in text:
-                return cmd
-    return None
-
-
-# ============================================================
-#                      CALLBACK (ОНОВЛЕНИЙ!)
+#                      CALLBACK
 # ============================================================
 
 @bot.callback_query_handler(func=lambda c: True)
@@ -159,7 +161,6 @@ def callback(c):
 
             bot.answer_callback_query(c.id)
 
-            # видалити inline повідомлення
             try:
                 bot.delete_message(c.message.chat.id, c.message.message_id)
             except:
@@ -171,7 +172,8 @@ def callback(c):
                 reply_markup=main_menu(new_lang)
             )
 
-        return  # ← важливо
+        return
+
 
     # ===== Зміна формату =====
     if c.data.startswith("format_"):
@@ -186,10 +188,10 @@ def callback(c):
             c.message.message_id,
             reply_markup=settings_keyboard(user)
         )
-
         return
 
-    # ===== Toggle video+audio =====
+
+    # ===== Відео + аудіо =====
     if c.data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
         save_users(users)
@@ -206,32 +208,7 @@ def callback(c):
 
 
 # ============================================================
-#                  ЗАВАНТАЖЕННЯ
-# ============================================================
-
-def download_from_url(url, chat_id, user, lang):
-    t = texts[lang]
-
-    if "youtube.com" in url or "youtu.be" in url:
-        bot.send_message(chat_id, t["yt_disabled"])
-        return False
-
-    if "tiktok.com" in url:
-        return download_tiktok(url, chat_id, user, lang)
-
-    if "instagram.com" in url:
-        return download_instagram(url, chat_id, user, lang)
-
-    bot.send_message(chat_id, t["unsupported"])
-    return False
-
-
-# (⚠ Для скорочення не переписую TikTok/IG функції —
-#   вони повністю залишаються без змін у тебе)
-
-
-# ============================================================
-#                     ХЕНДЛЕРИ
+#                     ХЕНДЛЕРИ ПОВІДОМЛЕНЬ
 # ============================================================
 
 @bot.message_handler(commands=["start"])
@@ -246,11 +223,11 @@ def msg(m):
     u = get_user(m.from_user)
     lang = u["language"]
     t = texts[lang]
-    txt = (m.text or "").lower()
+    txt = clean_text(m.text or "")
 
+    # -------- URL --------
     if txt.startswith("http"):
         bot.send_message(m.chat.id, t["loading"])
-
         ok = download_from_url(m.text, m.chat.id, u, lang)
 
         if ok:
@@ -259,6 +236,7 @@ def msg(m):
 
         return
 
+    # -------- Команди --------
     cmd = match_cmd(txt)
 
     if cmd == "menu":
@@ -286,10 +264,8 @@ def msg(m):
         kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
         kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
 
-        bot.send_message(m.chat.id, "🌍 Обери мову:", reply_markup=kb)
+        bot.send_message(m.chat.id, t["language"], reply_markup=kb)
         return
-
-
 
     if cmd == "settings":
         bot.send_message(m.chat.id, f"⚙️ {t['settings']}:", reply_markup=settings_keyboard(u))
@@ -310,6 +286,7 @@ def msg(m):
     bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
 
 
+
 # ============================================================
 #                     WEBHOOK
 # ============================================================
@@ -318,12 +295,12 @@ def msg(m):
 def home():
     return "Bot is running!"
 
-
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook_receiver():
     update = types.Update.de_json(request.get_json())
     bot.process_new_updates([update])
     return "OK", 200
+
 
 
 # ============================================================
@@ -337,7 +314,3 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
-
-
-
-
