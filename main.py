@@ -109,11 +109,15 @@ def match_cmd(text):
 
 def main_menu(lang):
     t = texts[lang]
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(f"📋 {t['menu']}", f"👤 {t['profile']}")
-    kb.add(f"⚙️ {t['settings']}", f"🌍 {t['language']}")
-    kb.add(f"💎 {t['subscription']}", f"ℹ️ {t['help']}")
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton(f"📋 {t['menu']}", callback_data="cmd_menu"))
+    kb.add(types.InlineKeyboardButton(f"👤 {t['profile']}", callback_data="cmd_profile"))
+    kb.add(types.InlineKeyboardButton(f"⚙️ {t['settings']}", callback_data="cmd_settings"))
+    kb.add(types.InlineKeyboardButton(f"🌍 {t['language']}", callback_data="cmd_language"))
+    kb.add(types.InlineKeyboardButton(f"💎 {t['subscription']}", callback_data="cmd_sub"))
+    kb.add(types.InlineKeyboardButton(f"ℹ️ {t['help']}", callback_data="cmd_help"))
     return kb
+
 
 
 def back_menu(lang):
@@ -148,59 +152,48 @@ def settings_keyboard(user):
 def callback(c):
     user = get_user(c.from_user)
     lang = user["language"]
+    t = texts[lang]
 
-    # ===== Зміна мови =====
-    if c.data.startswith("lang_"):
-        new_lang = c.data.replace("lang_", "")
+    # ======= 📌 КОМАНДИ МЕНЮ =======
+    if c.data.startswith("cmd_"):
+        bot.answer_callback_query(c.id)
 
-        if new_lang in texts:
-            user["language"] = new_lang
-            save_users(users)
-            t_new = texts[new_lang]
+        if c.data == "cmd_menu":
+            bot.send_message(c.message.chat.id, t["enter_url"], reply_markup=main_menu(lang))
 
-            bot.answer_callback_query(c.id)
-
-            try:
-                bot.delete_message(c.message.chat.id, c.message.message_id)
-            except:
-                pass
-
-            bot.send_message(
-                c.message.chat.id,
-                t_new["welcome"],
-                reply_markup=main_menu(new_lang)
+        elif c.data == "cmd_profile":
+            msg_text = (
+                f"👤 {t['profile']}\n\n"
+                f"🆔 `{c.from_user.id}`\n"
+                f"👋 {t['lbl_name']}: {user['name']}\n"
+                f"🎥 {t['lbl_downloaded']}: {user['videos_downloaded']}\n"
+                f"🎞️ {t['lbl_format']}: {user['format'].upper()}\n"
+                f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if user['video_plus_audio'] else t['no']}\n"
+                f"📅 {t['lbl_since']}: {user['joined']}\n"
             )
+            bot.send_message(c.message.chat.id, msg_text, parse_mode="Markdown", reply_markup=main_menu(lang))
 
-        return
+        elif c.data == "cmd_settings":
+            bot.send_message(c.message.chat.id, f"⚙️ {t['settings']}:", reply_markup=settings_keyboard(user))
 
-    # ===== Зміна формату =====
-    if c.data.startswith("format_"):
-        user["format"] = c.data.replace("format_", "")
-        user["audio_only"] = (user["format"] == "mp3")
-        save_users(users)
+        elif c.data == "cmd_language":
+            lang_menu = types.InlineKeyboardMarkup()
+            lang_menu.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
+            lang_menu.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+            lang_menu.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
+            lang_menu.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
+            lang_menu.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
 
-        bot.answer_callback_query(c.id)
+            bot.send_message(c.message.chat.id, t["language"], reply_markup=lang_menu)
 
-        bot.edit_message_reply_markup(
-            c.message.chat.id,
-            c.message.message_id,
-            reply_markup=settings_keyboard(user)
-        )
-        return
+        elif c.data == "cmd_sub":
+            bot.send_message(c.message.chat.id, t["free_version"])
 
-    # ===== Відео + аудіо =====
-    if c.data == "toggle_vpa":
-        user["video_plus_audio"] = not user["video_plus_audio"]
-        save_users(users)
+        elif c.data == "cmd_help":
+            bot.send_message(c.message.chat.id, t["help_text"])
 
-        bot.answer_callback_query(c.id)
+        return  # <<< ВАЖЛИВО
 
-        bot.edit_message_reply_markup(
-            c.message.chat.id,
-            c.message.message_id,
-            reply_markup=settings_keyboard(user)
-        )
-        return
 
 
 # ============================================================
@@ -591,3 +584,4 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
