@@ -570,7 +570,12 @@ def _cleanup_files(files):
 def start(m):
     u = get_user(m.from_user)
     lang = u["language"]
+
+    # УСТАНОВКА МЕНЮ СПРАВА
+    bot.set_chat_menu_button(chat_id=m.chat.id, menu_button=types.MenuButtonCommands())
+
     bot.send_message(m.chat.id, texts[lang]["welcome"])
+
 
 
 @bot.message_handler(func=lambda m: True)
@@ -682,10 +687,10 @@ if __name__ == "__main__":
 
     setup_bot_commands()  # ← включає меню біля поля вводу
 
-    # 🔥 ДОДАНО: менюшка справа
-    bot.set_chat_menu_button(types.MenuButtonCommands())
+
 
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
