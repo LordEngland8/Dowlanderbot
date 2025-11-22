@@ -148,17 +148,18 @@ def callback(c):
     lang = user["language"]
     t = texts[lang]
 
-    # --- зміна мови ---
+    # ===== Зміна мови =====
     if c.data.startswith("lang_"):
         new_lang = c.data.replace("lang_", "")
+
         if new_lang in texts:
             user["language"] = new_lang
             save_users(users)
             t_new = texts[new_lang]
 
-            bot.answer_callback_query(c.id)  # тільки тут!
+            bot.answer_callback_query(c.id)
 
-            # замість edit_message_text
+            # видалити inline повідомлення
             try:
                 bot.delete_message(c.message.chat.id, c.message.message_id)
             except:
@@ -169,9 +170,10 @@ def callback(c):
                 t_new["welcome"],
                 reply_markup=main_menu(new_lang)
             )
-        return
 
-    # --- формат ---
+        return  # ← важливо
+
+    # ===== Зміна формату =====
     if c.data.startswith("format_"):
         user["format"] = c.data.replace("format_", "")
         user["audio_only"] = (user["format"] == "mp3")
@@ -184,9 +186,10 @@ def callback(c):
             c.message.message_id,
             reply_markup=settings_keyboard(user)
         )
+
         return
 
-    # --- toggle video + audio ---
+    # ===== Toggle video+audio =====
     if c.data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
         save_users(users)
@@ -199,6 +202,7 @@ def callback(c):
             reply_markup=settings_keyboard(user)
         )
         return
+
 
 
 # ============================================================
@@ -333,6 +337,7 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
 
