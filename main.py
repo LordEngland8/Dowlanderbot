@@ -148,7 +148,7 @@ def callback(c):
     lang = user["language"]
     t = texts[lang]
 
-    # ==================== зміна мови ====================
+    # --- зміна мови ---
     if c.data.startswith("lang_"):
         new_lang = c.data.replace("lang_", "")
         if new_lang in texts:
@@ -156,24 +156,29 @@ def callback(c):
             save_users(users)
             t_new = texts[new_lang]
 
-            # без поп-апа щоб не було помилки
-            bot.answer_callback_query(c.id)
+            bot.answer_callback_query(c.id)  # тільки тут!
 
-            bot.edit_message_text(
-                t_new["welcome"],
+            # замість edit_message_text
+            try:
+                bot.delete_message(c.message.chat.id, c.message.message_id)
+            except:
+                pass
+
+            bot.send_message(
                 c.message.chat.id,
-                c.message.message_id,
+                t_new["welcome"],
                 reply_markup=main_menu(new_lang)
             )
         return
 
-    # ==================== зміна формату ====================
+    # --- формат ---
     if c.data.startswith("format_"):
         user["format"] = c.data.replace("format_", "")
         user["audio_only"] = (user["format"] == "mp3")
         save_users(users)
 
         bot.answer_callback_query(c.id)
+
         bot.edit_message_reply_markup(
             c.message.chat.id,
             c.message.message_id,
@@ -181,12 +186,13 @@ def callback(c):
         )
         return
 
-    # ==================== toggle video + audio ====================
+    # --- toggle video + audio ---
     if c.data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
         save_users(users)
 
         bot.answer_callback_query(c.id)
+
         bot.edit_message_reply_markup(
             c.message.chat.id,
             c.message.message_id,
@@ -327,5 +333,6 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
 
