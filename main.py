@@ -26,6 +26,8 @@ USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+COOKIES_FILE = "cookies.txt"
+
 
 # ============================================================
 #                  СИСТЕМА КОРИСТУВАЧІВ
@@ -34,8 +36,10 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 def load_users():
     return json.load(open(USER_FILE, "r", encoding="utf-8")) if os.path.exists(USER_FILE) else {}
 
+
 def save_users(data):
     json.dump(data, open(USER_FILE, "w", encoding="utf-8"), indent=4, ensure_ascii=False)
+
 
 users = load_users()
 
@@ -50,9 +54,9 @@ def get_user(u):
             "videos_downloaded": 0,
             "joined": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "language": "uk",
-            "format": "mp4",
+            "format": "mp4",          # mp4 / mp3 / webm
             "audio_only": False,
-            "video_plus_audio": True
+            "video_plus_audio": True  # відео + окреме аудіо
         }
         save_users(users)
 
@@ -224,7 +228,9 @@ def main_menu(lang):
 
 
 def back_menu(lang):
-    return types.ReplyKeyboardMarkup(resize_keyboard=True).add(f"⬅️ {texts[lang]['back']}")
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(f"⬅️ {texts[lang]['back']}")
+    return kb
 
 
 def settings_keyboard(user):
@@ -274,47 +280,79 @@ def match_cmd(text):
     return None
 
 
-COOKIES_FILE = "cookies.txt"
+# ============================================================
+#             ДОПОМІЖНІ ДЛЯ yt-dlp / YOUTUBE
+# ============================================================
 
 def _yt_base_args():
-    args = ["yt-dlp"]
+    args = ["yt-dlp", "--force-ipv4"]
     if os.path.exists(COOKIES_FILE):
         args += ["--cookies", COOKIES_FILE]
     return args
 
 
-def download_from_url(url, chat_id, user):
-    import re
-
-    # YouTube
-    if "youtube.com" in url or "youtu.be" in url:
-        return download_youtube(url, chat_id, user)
-
-    # TikTok
-    if "tiktok.com" in url:
-        return download_tiktok(url, chat_id)
-
-    # Instagram Reels
-    if "instagram.com" in url and "/reel/" in url:
-        return download_instagram(url, chat_id)
-
-    bot.send_message(chat_id, "❌ Платформа не підтримується.")
-    return False
-
-
-# =============================== YOUTUBE ===============================
+# ============================================================
+#             ЗАВАНТАЖЕННЯ ВІДЕО (УСІ ПЛАТФОРМИ)
+# ============================================================
 
 def download_youtube(url, chat_id, user):
     fmt = user["format"]
-    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
+    video_plus_audio = user.get("video_plus_audio", True)
 
-    base = ["yt-dlp", "--force-ipv4"]
+    # ---------- АУДІО ТІЛЬКИ ----------
+    if fmt == "mp3" and not video_plus_audio:
+        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
+        base = _yt_base_args()
+        clients = [
+            "--youtube-client=android",
+            "--youtube-client=tv",
+            "--youtube-client=ios",
+            "--youtube-client=web",
+        ]
 
-    # Cookies якщо є
-    if os.path.exists("cookies.txt"):
-        base += ["--cookies", "cookies.txt"]
+        for client in clients:
+            cmd = base + [
+                client,
+                "-o", audio_template,
+                "-x",
+                "--audio-format", "mp3",
+                "--audio-quality", "0",
+                url
+            ]
+            try:
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
+                break
+            except subprocess.CalledProcessError as e:
+                err = e.stderr or e.stdout or ""
+                if "HTTP Error 429" in err:
+                    bot.send_message(chat_id, "⚠ YouTube тимчасово обмежив запити (429). Спробуй пізніше.")
+                    return False
+                if "Sign in to confirm you’re not a bot" in err:
+                    continue
+        else:
+            bot.send_message(chat_id, "❌ YouTube не дозволяє скачати це аудіо (CAPTCHA).")
+            return False
 
-    # fallback клієнти (анти-CAPTCHA)
+        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
+        if audio_files:
+            with open(audio_files[0], "rb") as f:
+                bot.send_audio(chat_id, f)
+            return True
+
+        bot.send_message(chat_id, "❌ Не вдалося знайти аудіофайл.")
+        return False
+
+    # ---------- ВІДЕО (MP4/WEBM) ----------
+    if fmt == "webm":
+        video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
+        format_selector = "bv*[ext=webm]+ba[ext=webm]/best[ext=webm]/best"
+        merge_args = []
+    else:
+        video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
+        format_selector = "bestvideo*+bestaudio/best"
+        merge_args = ["--merge-output-format", "mp4"]
+
+    base = _yt_base_args()
     clients = [
         "--youtube-client=android",
         "--youtube-client=tv",
@@ -326,39 +364,89 @@ def download_youtube(url, chat_id, user):
         cmd = base + [
             client,
             "-o", video_template,
-            "-f", "bestvideo*+bestaudio/best",
-            "--merge-output-format", "mp4",
-            url
-        ]
+            "-f", format_selector,
+        ] + merge_args + [url]
 
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True)
             break
         except subprocess.CalledProcessError as e:
-            err = e.stderr or e.stdout
-            if "Sign in to confirm" in err:
-                continue
+            err = e.stderr or e.stdout or ""
             if "HTTP Error 429" in err:
-                bot.send_message(chat_id, "⚠ YouTube обмежив доступ, спробуйте пізніше.")
+                bot.send_message(chat_id, "⚠ YouTube тимчасово обмежив запити (429). Спробуй пізніше.")
                 return False
+            if "Sign in to confirm you’re not a bot" in err:
+                # пробуємо інший client
+                continue
     else:
-        bot.send_message(chat_id, "❌ YouTube не дозволяє скачати це відео.")
+        bot.send_message(chat_id, "❌ YouTube не дозволяє скачати це відео (CAPTCHA).")
         return False
 
-    # Надсилаємо відео
-    file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
-    if file:
-        with open(file[0], "rb") as f:
-            bot.send_video(chat_id, f)
+    video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
+    if not video_files:
+        bot.send_message(chat_id, "❌ Не вдалося знайти відеофайл.")
+        return False
+
+    with open(video_files[0], "rb") as f:
+        bot.send_video(chat_id, f)
+
+    # Якщо треба ще окремо аудіо
+    if video_plus_audio:
+        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
+        cmd = base + [
+            "--youtube-client=android",
+            "-o", audio_template,
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", "0",
+            url
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
+            if audio_files:
+                with open(audio_files[0], "rb") as f:
+                    bot.send_audio(chat_id, f)
+        except subprocess.CalledProcessError:
+            # якщо аудіо не вдалося — просто пропускаємо
+            pass
 
     return True
 
 
-# =============================== TIKTOK ===============================
+def download_tiktok(url, chat_id, user):
+    fmt = user["format"]
+    video_plus_audio = user.get("video_plus_audio", True)
 
-def download_tiktok(url, chat_id):
-    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.%(ext)s")
+    # TikTok найчастіше mp4, форматів мало, тому не мудруємо
+    if fmt == "mp3" and not video_plus_audio:
+        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
+        cmd = [
+            "yt-dlp",
+            "--force-ipv4",
+            "--no-check-certificates",
+            "-o", audio_template,
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", "0",
+            url
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError:
+            bot.send_message(chat_id, "❌ TikTok не дозволив скачати аудіо.")
+            return False
 
+        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
+        if audio_files:
+            with open(audio_files[0], "rb") as f:
+                bot.send_audio(chat_id, f)
+            return True
+        bot.send_message(chat_id, "❌ Не вдалося знайти аудіофайл.")
+        return False
+
+    # Відео
+    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
     cmd = [
         "yt-dlp",
         "--force-ipv4",
@@ -371,28 +459,77 @@ def download_tiktok(url, chat_id):
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         bot.send_message(chat_id, "❌ TikTok не дозволив скачати відео.")
         return False
 
-    file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.*"))
-    if file:
-        with open(file[0], "rb") as f:
+    video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
+    if video_files:
+        with open(video_files[0], "rb") as f:
             bot.send_video(chat_id, f)
+
+    # Окреме аудіо, якщо потрібно
+    if video_plus_audio or (fmt == "mp3"):
+        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
+        cmd = [
+            "yt-dlp",
+            "--force-ipv4",
+            "--no-check-certificates",
+            "-o", audio_template,
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", "0",
+            url
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
+            if audio_files:
+                with open(audio_files[0], "rb") as f:
+                    bot.send_audio(chat_id, f)
+        except subprocess.CalledProcessError:
+            pass
+
     return True
 
 
-# =============================== INSTAGRAM ===============================
+def download_instagram(url, chat_id, user):
+    fmt = user["format"]
+    video_plus_audio = user.get("video_plus_audio", True)
 
-def download_instagram(url, chat_id):
-    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.%(ext)s")
+    if fmt == "mp3" and not video_plus_audio:
+        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
+        cmd = [
+            "yt-dlp",
+            "--force-ipv4",
+            "--no-check-certificates",
+            "-o", audio_template,
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", "0",
+            url
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError:
+            bot.send_message(chat_id, "❌ Instagram не дозволив скачати аудіо.")
+            return False
 
+        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
+        if audio_files:
+            with open(audio_files[0], "rb") as f:
+                bot.send_audio(chat_id, f)
+            return True
+        bot.send_message(chat_id, "❌ Не вдалося знайти аудіофайл.")
+        return False
+
+    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
     cmd = [
         "yt-dlp",
         "--force-ipv4",
         "--no-check-certificates",
         "-o", video_template,
-        "-f", "mp4",
+        "-f", "best",
         url
     ]
 
@@ -402,75 +539,53 @@ def download_instagram(url, chat_id):
         bot.send_message(chat_id, "❌ Instagram заблокував завантаження.")
         return False
 
-    file = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.*"))
-    if file:
-        with open(file[0], "rb") as f:
-            bot.send_video(chat_id, f)
-    return True
-        
-
-    # --------------------------
-    #    АУДІО ТІЛЬКИ (MP3)
-    # --------------------------
-    if fmt == "mp3":
-        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-
-        ok, _ = run_yt([
-            "-o", audio_template,
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-        ])
-        if not ok:
-            return False
-
-        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-        if audio_files:
-            with open(audio_files[0], "rb") as f:
-                bot.send_audio(chat_id, f)
-        return True
-
-    # --------------------------
-    #         ВІДЕО
-    # --------------------------
-    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
-
-    ok, _ = run_yt([
-        "-o", video_template,
-        "-f", "bestvideo*+bestaudio/best",
-        "--merge-output-format", "mp4",
-    ])
-    if not ok:
-        return False
-
     video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
     if video_files:
         with open(video_files[0], "rb") as f:
             bot.send_video(chat_id, f)
 
-    # --------------------------
-    #    ВІДЕО + ОКРЕМО АУДІО
-    # --------------------------
-    if user["video_plus_audio"]:
+    # Окреме аудіо, якщо увімкнено
+    if video_plus_audio or (fmt == "mp3"):
         audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-
-        ok, _ = run_yt([
+        cmd = [
+            "yt-dlp",
+            "--force-ipv4",
+            "--no-check-certificates",
             "-o", audio_template,
             "-x",
             "--audio-format", "mp3",
             "--audio-quality", "0",
-        ])
-        if not ok:
-            return False
-
-        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-        if audio_files:
-            with open(audio_files[0], "rb") as f:
-                bot.send_audio(chat_id, f)
+            url
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
+            if audio_files:
+                with open(audio_files[0], "rb") as f:
+                    bot.send_audio(chat_id, f)
+        except subprocess.CalledProcessError:
+            pass
 
     return True
 
 
+def download_and_send(url, chat_id, user, lang):
+    low = url.lower()
+
+    # YouTube
+    if "youtube.com" in low or "youtu.be" in low:
+        return download_youtube(url, chat_id, user)
+
+    # TikTok
+    if "tiktok.com" in low:
+        return download_tiktok(url, chat_id, user)
+
+    # Instagram Reels
+    if "instagram.com" in low and "/reel/" in low:
+        return download_instagram(url, chat_id, user)
+
+    bot.send_message(chat_id, "❌ Платформа не підтримується.")
+    return False
 
 
 # ============================================================
@@ -481,21 +596,43 @@ def download_instagram(url, chat_id):
 def callback(c):
     user = get_user(c.from_user)
     lang = user["language"]
+    t = texts[lang]
 
+    # зміна формату
     if c.data.startswith("format_"):
         fmt = c.data.replace("format_", "")
         user["format"] = fmt
         user["audio_only"] = (fmt == "mp3")
         save_users(users)
         bot.answer_callback_query(c.id, "✔ Збережено!")
-        bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=settings_keyboard(user))
+        bot.edit_message_reply_markup(
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=settings_keyboard(user)
+        )
         return
 
+    # toggle відео+аудіо
     if c.data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
         save_users(users)
         bot.answer_callback_query(c.id, "✔ Збережено!")
-        bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=settings_keyboard(user))
+        bot.edit_message_reply_markup(
+            c.message.chat.id,
+            c.message.message_id,
+            reply_markup=settings_keyboard(user)
+        )
+        return
+
+    # зміна мови
+    if c.data.startswith("lang_"):
+        code = c.data.replace("lang_", "")
+        if code in texts:
+            user["language"] = code
+            save_users(users)
+            bot.answer_callback_query(c.id, texts[code]["lang_saved"])
+        else:
+            bot.answer_callback_query(c.id, "❌ Unknown language code")
         return
 
 
@@ -517,24 +654,14 @@ def msg(m):
     t = texts[lang]
     txt = (m.text or "").lower()
 
-      # --- ОБРОБКА ПОСИЛАННЯ ---
+    # --- ОБРОБКА ПОСИЛАННЯ ---
     if txt.startswith("http"):
         bot.send_message(m.chat.id, "⏳ Завантаження…")
-
-        ok, result = download_and_send(m.text, m.chat.id, u, lang)
-
+        ok = download_and_send(m.text, m.chat.id, u, lang)
         if ok:
             u["videos_downloaded"] += 1
             save_users(users)
-        else:
-            # Якщо завантаження не вдалося
-            bot.send_message(m.chat.id,
-                "❌ Не вдалося скачати відео.\n"
-                "🔄 Спробуй інше посилання або увімкни Cookies/анти-CAPTCHA у налаштуваннях."
-            )
-
         return
-
 
     # --- КОМАНДИ ---
     cmd = match_cmd(txt)
@@ -585,7 +712,6 @@ def msg(m):
     bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(lang))
 
 
-
 # ============================================================
 #                     WEBHOOK
 # ============================================================
@@ -593,6 +719,7 @@ def msg(m):
 @app.route("/", methods=["GET"])
 def home():
     return "Bot is running!"
+
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook_receiver():
@@ -612,14 +739,3 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
-
-
-
-
-
-
-
-
-
-
-
