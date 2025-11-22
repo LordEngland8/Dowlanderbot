@@ -26,8 +26,6 @@ USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-COOKIES_FILE = "cookies.txt"
-
 
 # ============================================================
 #                  СИСТЕМА КОРИСТУВАЧІВ
@@ -82,11 +80,19 @@ texts = {
         "back": "Назад",
 
         "lang_saved": "✅ Мову збережено! 🇺🇦",
-        "welcome": "👋 Привіт! Надішли посилання на відео.",
+        "welcome": "👋 Привіт! Надішли посилання на відео або TikTok/Instagram.",
         "enter_url": "📎 Надішли посилання!",
         "free_version": "💎 Безкоштовна версія.",
-        "help_text": "🤖 Бот вміє:\n• Завантажувати відео\n• Показувати профіль\n• Має налаштування",
+        "help_text": "🤖 Бот вміє:\n• Завантажувати відео з TikTok/Instagram\n• Показувати профіль\n• Має налаштування",
         "not_understood": "😅 Не розумію, обери кнопку.",
+
+        "loading": "⏳ Завантаження…",
+        "unsupported": "❌ Ця платформа поки не підтримується.",
+        "yt_disabled": "⛔ Завантаження з YouTube тимчасово недоступне.",
+        "download_failed": "❌ Не вдалося скачати медіа. Спробуй інше посилання.",
+        "tiktok_error": "❌ Не вдалося завантажити з TikTok.",
+        "ig_error": "❌ Не вдалося завантажити з Instagram.",
+        "tiktok_photo_caption": "📷 Фото з TikTok",
 
         "lbl_name": "Ім’я",
         "lbl_subscription": "Підписка",
@@ -110,11 +116,19 @@ texts = {
         "back": "Back",
 
         "lang_saved": "✅ Language saved! 🇬🇧",
-        "welcome": "👋 Hello! Send a link.",
+        "welcome": "👋 Hello! Send a link (TikTok / Instagram).",
         "enter_url": "📎 Send a link!",
         "free_version": "💎 Free version.",
-        "help_text": "🤖 Bot can:\n• Download videos\n• Show profile\n• Has settings",
-        "not_understood": "😅 I don't understand.",
+        "help_text": "🤖 Bot can:\n• Download videos from TikTok/Instagram\n• Show profile\n• Has settings",
+        "not_understood": "😅 I don't understand, use the buttons.",
+
+        "loading": "⏳ Downloading…",
+        "unsupported": "❌ This platform is not supported yet.",
+        "yt_disabled": "⛔ Downloading from YouTube is temporarily unavailable.",
+        "download_failed": "❌ Failed to download media. Try another link.",
+        "tiktok_error": "❌ Failed to download from TikTok.",
+        "ig_error": "❌ Failed to download from Instagram.",
+        "tiktok_photo_caption": "📷 Photo from TikTok",
 
         "lbl_name": "Name",
         "lbl_subscription": "Subscription",
@@ -138,11 +152,19 @@ texts = {
         "back": "Назад",
 
         "lang_saved": "✅ Язык сохранён! 🇷🇺",
-        "welcome": "👋 Привет! Пришли ссылку.",
+        "welcome": "👋 Привет! Пришли ссылку (TikTok / Instagram).",
         "enter_url": "📎 Пришли ссылку!",
         "free_version": "💎 Бесплатная версия.",
-        "help_text": "🤖 Бот умеет:\n• Скачать видео\n• Показать профиль\n• Настройки",
-        "not_understood": "😅 Не понимаю.",
+        "help_text": "🤖 Бот умеет:\n• Скачать видео из TikTok/Instagram\n• Показать профиль\n• Настройки",
+        "not_understood": "😅 Не понимаю, выбери кнопку.",
+
+        "loading": "⏳ Загрузка…",
+        "unsupported": "❌ Эта платформа пока не поддерживается.",
+        "yt_disabled": "⛔ Загрузка с YouTube временно недоступна.",
+        "download_failed": "❌ Не удалось скачать медиа. Попробуй другую ссылку.",
+        "tiktok_error": "❌ Не удалось скачать из TikTok.",
+        "ig_error": "❌ Не удалось скачать из Instagram.",
+        "tiktok_photo_caption": "📷 Фото из TikTok",
 
         "lbl_name": "Имя",
         "lbl_subscription": "Подписка",
@@ -165,12 +187,20 @@ texts = {
         "help": "À propos du bot",
         "back": "Retour",
 
-        "lang_saved": "🇫🇷 Langue enregistrée!",
-        "welcome": "👋 Bonjour ! Envoie un lien.",
-        "enter_url": "📎 Envoie un lien!",
+        "lang_saved": "🇫🇷 Langue enregistrée !",
+        "welcome": "👋 Bonjour ! Envoie un lien (TikTok / Instagram).",
+        "enter_url": "📎 Envoie un lien !",
         "free_version": "💎 Version gratuite.",
-        "help_text": "🤖 Le bot peut:\n• Télécharger des vidéos\n• Afficher le profil\n• Paramètres",
-        "not_understood": "😅 Pas compris.",
+        "help_text": "🤖 Le bot peut :\n• Télécharger des vidéos TikTok/Instagram\n• Afficher le profil\n• Paramètres",
+        "not_understood": "😅 Je ne comprends pas, utilise les boutons.",
+
+        "loading": "⏳ Téléchargement…",
+        "unsupported": "❌ Cette plateforme n'est pas encore prise en charge.",
+        "yt_disabled": "⛔ Le téléchargement depuis YouTube est temporairement indisponible.",
+        "download_failed": "❌ Échec du téléchargement du média. Essaie un autre lien.",
+        "tiktok_error": "❌ Échec du téléchargement depuis TikTok.",
+        "ig_error": "❌ Échec du téléchargement depuis Instagram.",
+        "tiktok_photo_caption": "📷 Photo depuis TikTok",
 
         "lbl_name": "Nom",
         "lbl_subscription": "Abonnement",
@@ -194,11 +224,19 @@ texts = {
         "back": "Zurück",
 
         "lang_saved": "🇩🇪 Sprache gespeichert!",
-        "welcome": "👋 Hallo! Link senden.",
-        "enter_url": "📎 Link senden!",
+        "welcome": "👋 Hallo! Sende einen Link (TikTok / Instagram).",
+        "enter_url": "📎 Sende einen Link!",
         "free_version": "💎 Kostenlose Version.",
-        "help_text": "🤖 Bot kann:\n• Videos downloaden\n• Profil anzeigen\n• Einstellungen",
-        "not_understood": "😅 Ich verstehe nicht.",
+        "help_text": "🤖 Bot kann:\n• Videos von TikTok/Instagram herunterladen\n• Profil anzeigen\n• Einstellungen",
+        "not_understood": "😅 Ich verstehe nicht, benutze die Tasten.",
+
+        "loading": "⏳ Wird heruntergeladen…",
+        "unsupported": "❌ Diese Plattform wird noch nicht unterstützt.",
+        "yt_disabled": "⛔ Das Herunterladen von YouTube ist vorübergehend nicht verfügbar.",
+        "download_failed": "❌ Medien konnten nicht heruntergeladen werden. Versuch einen anderen Link.",
+        "tiktok_error": "❌ Herunterladen von TikTok fehlgeschlagen.",
+        "ig_error": "❌ Herunterladen von Instagram fehlgeschlagen.",
+        "tiktok_photo_caption": "📷 Foto von TikTok",
 
         "lbl_name": "Name",
         "lbl_subscription": "Mitgliedschaft",
@@ -281,310 +319,185 @@ def match_cmd(text):
 
 
 # ============================================================
-#             ДОПОМІЖНІ ДЛЯ yt-dlp / YOUTUBE
+#              ЗАВАНТАЖЕННЯ З РІЗНИХ ПЛАТФОРМ
 # ============================================================
 
-def _yt_base_args():
-    args = ["yt-dlp", "--force-ipv4"]
-    if os.path.exists(COOKIES_FILE):
-        args += ["--cookies", COOKIES_FILE]
-    return args
+def download_from_url(url, chat_id, user, lang):
+    t = texts[lang]
+
+    # YouTube — тимчасово вимкнено
+    if "youtube.com" in url or "youtu.be" in url:
+        bot.send_message(chat_id, t["yt_disabled"])
+        return False
+
+    # TikTok
+    if "tiktok.com" in url:
+        return download_tiktok(url, chat_id, user, lang)
+
+    # Instagram Reels / відео
+    if "instagram.com" in url:
+        return download_instagram(url, chat_id, user, lang)
+
+    bot.send_message(chat_id, t["unsupported"])
+    return False
 
 
-# ============================================================
-#             ЗАВАНТАЖЕННЯ ВІДЕО (УСІ ПЛАТФОРМИ)
-# ============================================================
+# =============================== TIKTOK ===============================
 
-def download_youtube(url, chat_id, user):
+def download_tiktok(url, chat_id, user, lang):
+    t = texts[lang]
     fmt = user["format"]
-    video_plus_audio = user.get("video_plus_audio", True)
+    template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.%(ext)s")
 
-    # ---------- АУДІО ТІЛЬКИ ----------
-    if fmt == "mp3" and not video_plus_audio:
-        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-        base = _yt_base_args()
-        clients = [
-            "--youtube-client=android",
-            "--youtube-client=tv",
-            "--youtube-client=ios",
-            "--youtube-client=web",
-        ]
-
-        for client in clients:
-            cmd = base + [
-                client,
-                "-o", audio_template,
-                "-x",
-                "--audio-format", "mp3",
-                "--audio-quality", "0",
-                url
-            ]
-            try:
-                subprocess.run(cmd, check=True, capture_output=True, text=True)
-                break
-            except subprocess.CalledProcessError as e:
-                err = e.stderr or e.stdout or ""
-                if "HTTP Error 429" in err:
-                    bot.send_message(chat_id, "⚠ YouTube тимчасово обмежив запити (429). Спробуй пізніше.")
-                    return False
-                if "Sign in to confirm you’re not a bot" in err:
-                    continue
-        else:
-            bot.send_message(chat_id, "❌ YouTube не дозволяє скачати це аудіо (CAPTCHA).")
-            return False
-
-        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-        if audio_files:
-            with open(audio_files[0], "rb") as f:
-                bot.send_audio(chat_id, f)
-            return True
-
-        bot.send_message(chat_id, "❌ Не вдалося знайти аудіофайл.")
-        return False
-
-    # ---------- ВІДЕО (MP4/WEBM) ----------
-    if fmt == "webm":
-        video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
-        format_selector = "bv*[ext=webm]+ba[ext=webm]/best[ext=webm]/best"
-        merge_args = []
-    else:
-        video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
-        format_selector = "bestvideo*+bestaudio/best"
-        merge_args = ["--merge-output-format", "mp4"]
-
-    base = _yt_base_args()
-    clients = [
-        "--youtube-client=android",
-        "--youtube-client=tv",
-        "--youtube-client=ios",
-        "--youtube-client=web",
-    ]
-
-    for client in clients:
-        cmd = base + [
-            client,
-            "-o", video_template,
-            "-f", format_selector,
-        ] + merge_args + [url]
-
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-            break
-        except subprocess.CalledProcessError as e:
-            err = e.stderr or e.stdout or ""
-            if "HTTP Error 429" in err:
-                bot.send_message(chat_id, "⚠ YouTube тимчасово обмежив запити (429). Спробуй пізніше.")
-                return False
-            if "Sign in to confirm you’re not a bot" in err:
-                # пробуємо інший client
-                continue
-    else:
-        bot.send_message(chat_id, "❌ YouTube не дозволяє скачати це відео (CAPTCHA).")
-        return False
-
-    video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
-    if not video_files:
-        bot.send_message(chat_id, "❌ Не вдалося знайти відеофайл.")
-        return False
-
-    with open(video_files[0], "rb") as f:
-        bot.send_video(chat_id, f)
-
-    # Якщо треба ще окремо аудіо
-    if video_plus_audio:
-        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-        cmd = base + [
-            "--youtube-client=android",
-            "-o", audio_template,
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-            url
-        ]
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-            audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-            if audio_files:
-                with open(audio_files[0], "rb") as f:
-                    bot.send_audio(chat_id, f)
-        except subprocess.CalledProcessError:
-            # якщо аудіо не вдалося — просто пропускаємо
-            pass
-
-    return True
-
-
-def download_tiktok(url, chat_id, user):
-    fmt = user["format"]
-    video_plus_audio = user.get("video_plus_audio", True)
-
-    # TikTok найчастіше mp4, форматів мало, тому не мудруємо
-    if fmt == "mp3" and not video_plus_audio:
-        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-        cmd = [
-            "yt-dlp",
-            "--force-ipv4",
-            "--no-check-certificates",
-            "-o", audio_template,
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-            url
-        ]
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError:
-            bot.send_message(chat_id, "❌ TikTok не дозволив скачати аудіо.")
-            return False
-
-        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-        if audio_files:
-            with open(audio_files[0], "rb") as f:
-                bot.send_audio(chat_id, f)
-            return True
-        bot.send_message(chat_id, "❌ Не вдалося знайти аудіофайл.")
-        return False
-
-    # Відео
-    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
-    cmd = [
+    base_cmd = [
         "yt-dlp",
         "--force-ipv4",
         "--no-check-certificates",
         "--referer", "https://www.tiktok.com/",
-        "-o", video_template,
-        "-f", "bv*+ba/best",
-        url
+        "-o", template,
     ]
+
+    # якщо обрано MP3 – качаємо тільки аудіо
+    if fmt == "mp3":
+        cmd = base_cmd + [
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", "0",
+        ]
+    else:
+        cmd = base_cmd + [
+            "-f", "bv*+ba/best",
+        ]
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError:
-        bot.send_message(chat_id, "❌ TikTok не дозволив скачати відео.")
+        bot.send_message(chat_id, t["tiktok_error"])
         return False
 
-    video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
-    if video_files:
-        with open(video_files[0], "rb") as f:
-            bot.send_video(chat_id, f)
+    files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.*"))
+    if not files:
+        bot.send_message(chat_id, t["download_failed"])
+        return False
 
-    # Окреме аудіо, якщо потрібно
-    if video_plus_audio or (fmt == "mp3"):
-        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-        cmd = [
-            "yt-dlp",
-            "--force-ipv4",
-            "--no-check-certificates",
-            "-o", audio_template,
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-            url
-        ]
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-            audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-            if audio_files:
-                with open(audio_files[0], "rb") as f:
+    audio_exts = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
+    video_exts = (".mp4", ".webm", ".mov", ".mkv")
+    image_exts = (".jpg", ".jpeg", ".png", ".webp")
+
+    # Якщо формат mp3 → шукаємо аудіо
+    if fmt == "mp3":
+        for path in files:
+            ext = os.path.splitext(path)[1].lower()
+            if ext in audio_exts:
+                with open(path, "rb") as f:
                     bot.send_audio(chat_id, f)
-        except subprocess.CalledProcessError:
-            pass
-
-    return True
-
-
-def download_instagram(url, chat_id, user):
-    fmt = user["format"]
-    video_plus_audio = user.get("video_plus_audio", True)
-
-    if fmt == "mp3" and not video_plus_audio:
-        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-        cmd = [
-            "yt-dlp",
-            "--force-ipv4",
-            "--no-check-certificates",
-            "-o", audio_template,
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-            url
-        ]
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError:
-            bot.send_message(chat_id, "❌ Instagram не дозволив скачати аудіо.")
-            return False
-
-        audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-        if audio_files:
-            with open(audio_files[0], "rb") as f:
-                bot.send_audio(chat_id, f)
-            return True
-        bot.send_message(chat_id, "❌ Не вдалося знайти аудіофайл.")
+                return True
+        bot.send_message(chat_id, t["download_failed"])
         return False
 
-    video_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.%(ext)s")
-    cmd = [
+    # Спочатку пробуємо відео
+    for path in files:
+        ext = os.path.splitext(path)[1].lower()
+        if ext in video_exts:
+            with open(path, "rb") as f:
+                bot.send_video(chat_id, f)
+            return True
+
+    # Якщо відео нема – пробуємо картинки (TikTok photo post)
+    img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
+    if img_paths:
+        if len(img_paths) == 1:
+            with open(img_paths[0], "rb") as f:
+                bot.send_photo(chat_id, f, caption=t.get("tiktok_photo_caption", ""))
+        else:
+            media = []
+            for i, p in enumerate(sorted(img_paths)):
+                f = open(p, "rb")
+                if i == 0:
+                    media.append(types.InputMediaPhoto(f, caption=t.get("tiktok_photo_caption", "")))
+                else:
+                    media.append(types.InputMediaPhoto(f))
+            bot.send_media_group(chat_id, media)
+        return True
+
+    bot.send_message(chat_id, t["download_failed"])
+    return False
+
+
+# =============================== INSTAGRAM ===============================
+
+def download_instagram(url, chat_id, user, lang):
+    t = texts[lang]
+    fmt = user["format"]
+    template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.%(ext)s")
+
+    base_cmd = [
         "yt-dlp",
         "--force-ipv4",
         "--no-check-certificates",
-        "-o", video_template,
-        "-f", "best",
-        url
+        "-o", template,
     ]
+
+    if fmt == "mp3":
+        cmd = base_cmd + [
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", "0",
+        ]
+    else:
+        cmd = base_cmd + [
+            "-f", "bestvideo*+bestaudio/best",
+            "--merge-output-format", "mp4",
+        ]
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError:
-        bot.send_message(chat_id, "❌ Instagram заблокував завантаження.")
+        bot.send_message(chat_id, t["ig_error"])
         return False
 
-    video_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_video.*"))
-    if video_files:
-        with open(video_files[0], "rb") as f:
-            bot.send_video(chat_id, f)
+    files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.*"))
+    if not files:
+        bot.send_message(chat_id, t["download_failed"])
+        return False
 
-    # Окреме аудіо, якщо увімкнено
-    if video_plus_audio or (fmt == "mp3"):
-        audio_template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.%(ext)s")
-        cmd = [
-            "yt-dlp",
-            "--force-ipv4",
-            "--no-check-certificates",
-            "-o", audio_template,
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-            url
-        ]
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-            audio_files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_audio.*"))
-            if audio_files:
-                with open(audio_files[0], "rb") as f:
+    audio_exts = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
+    video_exts = (".mp4", ".webm", ".mov", ".mkv")
+    image_exts = (".jpg", ".jpeg", ".png", ".webp")
+
+    if fmt == "mp3":
+        for path in files:
+            ext = os.path.splitext(path)[1].lower()
+            if ext in audio_exts:
+                with open(path, "rb") as f:
                     bot.send_audio(chat_id, f)
-        except subprocess.CalledProcessError:
-            pass
+                return True
+        bot.send_message(chat_id, t["download_failed"])
+        return False
 
-    return True
+    # відео
+    for path in files:
+        ext = os.path.splitext(path)[1].lower()
+        if ext in video_exts:
+            with open(path, "rb") as f:
+                bot.send_video(chat_id, f)
+            return True
 
+    # картинки (якщо раптом фото-пост)
+    img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
+    if img_paths:
+        if len(img_paths) == 1:
+            with open(img_paths[0], "rb") as f:
+                bot.send_photo(chat_id, f)
+        else:
+            media = []
+            for p in sorted(img_paths):
+                f = open(p, "rb")
+                media.append(types.InputMediaPhoto(f))
+            bot.send_media_group(chat_id, media)
+        return True
 
-def download_and_send(url, chat_id, user, lang):
-    low = url.lower()
-
-    # YouTube
-    if "youtube.com" in low or "youtu.be" in low:
-        return download_youtube(url, chat_id, user)
-
-    # TikTok
-    if "tiktok.com" in low:
-        return download_tiktok(url, chat_id, user)
-
-    # Instagram Reels
-    if "instagram.com" in low and "/reel/" in low:
-        return download_instagram(url, chat_id, user)
-
-    bot.send_message(chat_id, "❌ Платформа не підтримується.")
+    bot.send_message(chat_id, t["download_failed"])
     return False
 
 
@@ -598,7 +511,25 @@ def callback(c):
     lang = user["language"]
     t = texts[lang]
 
-    # зміна формату
+    # --- зміна мови ---
+    if c.data.startswith("lang_"):
+        new_lang = c.data.replace("lang_", "")
+        if new_lang in texts:
+            user["language"] = new_lang
+            save_users(users)
+            t_new = texts[new_lang]
+            bot.answer_callback_query(c.id, t_new["lang_saved"])
+            bot.edit_message_text(
+                t_new["welcome"],
+                c.message.chat.id,
+                c.message.message_id,
+                reply_markup=main_menu(new_lang)
+            )
+        else:
+            bot.answer_callback_query(c.id, "Unsupported language")
+        return
+
+    # --- формат файлу ---
     if c.data.startswith("format_"):
         fmt = c.data.replace("format_", "")
         user["format"] = fmt
@@ -612,7 +543,7 @@ def callback(c):
         )
         return
 
-    # toggle відео+аудіо
+    # --- відео + аудіо ---
     if c.data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
         save_users(users)
@@ -622,17 +553,6 @@ def callback(c):
             c.message.message_id,
             reply_markup=settings_keyboard(user)
         )
-        return
-
-    # зміна мови
-    if c.data.startswith("lang_"):
-        code = c.data.replace("lang_", "")
-        if code in texts:
-            user["language"] = code
-            save_users(users)
-            bot.answer_callback_query(c.id, texts[code]["lang_saved"])
-        else:
-            bot.answer_callback_query(c.id, "❌ Unknown language code")
         return
 
 
@@ -656,11 +576,20 @@ def msg(m):
 
     # --- ОБРОБКА ПОСИЛАННЯ ---
     if txt.startswith("http"):
-        bot.send_message(m.chat.id, "⏳ Завантаження…")
-        ok = download_and_send(m.text, m.chat.id, u, lang)
+        bot.send_message(m.chat.id, t["loading"])
+
+        ok = download_from_url(m.text, m.chat.id, u, lang)
+
         if ok:
             u["videos_downloaded"] += 1
             save_users(users)
+        else:
+            # якщо платформа сама не відправила свою помилку,
+            # у більшості випадків вона вже відправлена в download_*,
+            # але на всяк випадок дублюємо:
+            # (повідомлення локалізоване)
+            pass
+
         return
 
     # --- КОМАНДИ ---
