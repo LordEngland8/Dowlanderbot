@@ -84,14 +84,15 @@ def clean_text(text):
 # ============================================================
 
 CMD = {
-    "menu": ["меню", "menu", "accueil"],
+    "menu": ["меню", "menu", "menü"],
     "profile": ["профіль", "проф", "profile", "profil"],
-    "settings": ["налаштування", "settings", "parametres", "paramètres"],
-    "language": ["мова", "language", "язык", "langue"],
-    "subscription": ["підписка", "subscription", "abonnement"],
-    "help": ["про бота", "help", "about", "aide"],
-    "back": ["назад", "back", "retour"]
+    "settings": ["налаш", "настройки", "settings", "einstellungen", "paramètres", "parametre"],
+    "language": ["мова", "язык", "language", "langue", "sprache"],
+    "subscription": ["підпис", "подпис", "subscription", "abonnement", "mitgliedschaft"],
+    "help": ["про бота", "help", "about", "à propos", "über bot"],
+    "back": ["назад", "back", "retour", "zurück", "⬅️"],
 }
+
 
 
 def match_cmd(text):
@@ -314,3 +315,4 @@ if __name__ == "__main__":
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
