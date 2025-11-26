@@ -12,7 +12,7 @@ from flask import Flask, request
 #                     ПІДКЛЮЧЕННЯ МОВ
 # ============================================================
 
-from languages import texts   # файл languages.py (словник texts = { "uk": {...}, ... })
+from languages import texts   # словник texts = { "uk": {...}, ... }
 
 
 # ============================================================
@@ -599,15 +599,11 @@ def start(m):
     u = get_user(m.from_user)
     lang = u["language"]
 
-    # ❗ НІЧОГО НЕ СТАВИМО В CHAT_MENU_BUTTON – залишаємо Telegram по дефолту
-    # bot.set_chat_menu_button(...) ← цього немає
-
     bot.send_message(
         m.chat.id,
         texts[lang]["welcome"],
         reply_markup=main_menu(u)
     )
-
 
 
 @bot.message_handler(func=lambda m: True)
@@ -705,7 +701,9 @@ def home():
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook_receiver():
-    update = types.Update.de_json(request.get_json())
+    # ВАЖЛИВО: зчитуємо сирий JSON, як радить pyTelegramBotAPI
+    json_str = request.get_data().decode("utf-8")
+    update = types.Update.de_json(json_str)
     bot.process_new_updates([update])
     return "OK", 200
 
@@ -716,11 +714,9 @@ def webhook_receiver():
 
 if __name__ == "__main__":
     print("🚀 Запуск Flask + Webhook")
-
-    setup_bot_commands()  # ← включає /menu, /profile, /settings, /language, /subscription, /help
+    setup_bot_commands()
 
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
 
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
-
