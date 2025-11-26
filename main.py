@@ -214,11 +214,16 @@ def download_site(url, chat_id, user, lang, prefix):
 def start(m):
     u = get_user(m.from_user)
     lang = u["language"]
+
+    # ❗ ВИКЛЮЧАЄМО КНОПКУ МЕНЮ ЛІВОРУЧ
+    bot.set_chat_menu_button(chat_id=m.chat.id, menu_button=types.MenuButtonDefault())
+
     bot.send_message(
         m.chat.id,
         texts[lang]["welcome"],
         reply_markup=main_menu(u)
     )
+
 
 
 @bot.message_handler(func=lambda m: True)
@@ -314,3 +319,4 @@ if __name__ == "__main__":
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
