@@ -108,7 +108,7 @@ def main_menu(user):
 
 
 # ============================================================
-#                      CALLBACK
+#                 CALLBACK HANDLER
 # ============================================================
 
 @bot.callback_query_handler(func=lambda c: True)
@@ -215,7 +215,7 @@ def start(m):
     u = get_user(m.from_user)
     lang = u["language"]
 
-    # ❗ ВИМКНУТИ КНОПКУ «≡»
+    # ❗ ВИМКНУТИ КНОПКУ «≡» НАЗАВЖДИ
     bot.set_chat_menu_button(chat_id=m.chat.id, menu_button=types.MenuButtonDefault())
 
     bot.send_message(
@@ -234,7 +234,7 @@ def msg(m):
     txt = clean_text(m.text)
 
     # URL
-    if m.text.startswith("http"):
+    if m.text and m.text.startswith("http"):
         bot.send_message(m.chat.id, t["loading"])
         ok = download_from_url(m.text, m.chat.id, u, lang)
         if ok:
@@ -295,6 +295,18 @@ def msg(m):
 
 
 # ============================================================
+#                 ПОВНЕ ВИДАЛЕННЯ ВСІХ КОМАНД
+# ============================================================
+
+def remove_all_commands():
+    try:
+        bot.set_my_commands([], language_code=None)
+        print("❎ УСІ КОМАНДИ ВИДАЛЕНО УСПІШНО!")
+    except Exception as e:
+        print("Error removing commands:", e)
+
+
+# ============================================================
 #                     WEBHOOK
 # ============================================================
 
@@ -315,6 +327,9 @@ def webhook_receiver():
 # ============================================================
 
 if __name__ == "__main__":
+    remove_all_commands()  # ← ВАЖЛИВО! Видаляє меню-команди у Telegram
+
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
+
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
