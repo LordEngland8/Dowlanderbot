@@ -82,7 +82,7 @@ def clean_text(text):
 
 
 # ============================================================
-#                 СТВОРЕННЯ ГОЛОВНОГО МЕНЮ
+#                 ГОЛОВНЕ МЕНЮ
 # ============================================================
 
 def main_menu(user):
@@ -215,7 +215,7 @@ def start(m):
     u = get_user(m.from_user)
     lang = u["language"]
 
-    # ❗ ВИКЛЮЧАЄМО КНОПКУ МЕНЮ ЛІВОРУЧ
+    # ❗ ВИМКНУТИ КНОПКУ «≡»
     bot.set_chat_menu_button(chat_id=m.chat.id, menu_button=types.MenuButtonDefault())
 
     bot.send_message(
@@ -223,7 +223,6 @@ def start(m):
         texts[lang]["welcome"],
         reply_markup=main_menu(u)
     )
-
 
 
 @bot.message_handler(func=lambda m: True)
@@ -243,7 +242,7 @@ def msg(m):
             save_users(users)
         return
 
-    # MENUS
+    # REPPLY MENU
     if txt == clean_text(f"📋 {t['menu']}"):
         bot.send_message(m.chat.id, t["enter_url"], reply_markup=main_menu(u))
         return
@@ -319,4 +318,3 @@ if __name__ == "__main__":
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
-
