@@ -714,9 +714,13 @@ def webhook_receiver():
 
 if __name__ == "__main__":
     print("🚀 Запуск Flask + Webhook")
-    setup_bot_commands()
 
+    setup_bot_commands()  # Команди меню (/menu /profile /settings...)
+
+    # ❗ Ставимо новий вебхук
     bot.delete_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
 
+    # ❗ Запуск Flask-сервера для Render
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
