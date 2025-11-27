@@ -287,6 +287,26 @@ def callback(c):
         return
 
 
+def extract_audio(video_path):
+    audio_path = video_path.rsplit('.', 1)[0] + ".mp3"
+    cmd = [
+        "ffmpeg",
+        "-i", video_path,
+        "-vn",
+        "-acodec", "mp3",
+        "-y",
+        audio_path
+    ]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        return audio_path
+    except Exception as e:
+        print("Audio extract error:", e)
+        return None
+
+
+
 # ============================================================
 #        ЗАВАНТАЖЕННЯ: TIKTOK / INSTAGRAM / ГЕНЕРИК
 # ============================================================
@@ -350,15 +370,11 @@ def download_tiktok(url, chat_id, user, lang):
     video_exts = (".mp4", ".webm", ".mov", ".mkv")
     image_exts = (".jpg", ".jpeg", ".png", ".webp")
 
+    # ------------------------ MP3 режим ------------------------
     if fmt == "mp3":
-        audio_path = None
-        for path in files:
-            if os.path.splitext(path)[1].lower() in audio_exts:
-                audio_path = path
-                break
+        audio_path = next((p for p in files if p.endswith(audio_exts)), None)
         if audio_path:
-            with open(audio_path, "rb") as f:
-                bot.send_audio(chat_id, f)
+            bot.send_audio(chat_id, open(audio_path, "rb"))
             _cleanup_files(files)
             return True
 
@@ -366,34 +382,25 @@ def download_tiktok(url, chat_id, user, lang):
         _cleanup_files(files)
         return False
 
-    video_path = None
-    for path in files:
-        if os.path.splitext(path)[1].lower() in video_exts:
-            video_path = path
-            break
-
-    audio_path = None
-    for path in files:
-        if os.path.splitext(path)[1].lower() in audio_exts:
-            audio_path = path
-            break
+    # ------------------------ ВІДЕО ------------------------
+    video_path = next((p for p in files if p.endswith(video_exts)), None)
+    img_paths = [p for p in files if p.endswith(image_exts)]
 
     if video_path:
-        with open(video_path, "rb") as f:
-            bot.send_video(chat_id, f)
+        bot.send_video(chat_id, open(video_path, "rb"))
 
-        if user.get("video_plus_audio") and audio_path:
-            with open(audio_path, "rb") as f:
-                bot.send_audio(chat_id, f)
+        if user.get("video_plus_audio"):
+            audio_path = extract_audio(video_path)
+            if audio_path and os.path.exists(audio_path):
+                bot.send_audio(chat_id, open(audio_path, "rb"))
 
         _cleanup_files(files)
         return True
 
-    img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
+    # ------------------------ ФОТО ------------------------
     if img_paths:
         if len(img_paths) == 1:
-            with open(img_paths[0], "rb") as f:
-                bot.send_photo(chat_id, f, caption=t.get("tiktok_photo_caption", ""))
+            bot.send_photo(chat_id, open(img_paths[0], "rb"), caption=t.get("tiktok_photo_caption", ""))
         else:
             media = []
             for i, p in enumerate(sorted(img_paths)):
@@ -403,6 +410,7 @@ def download_tiktok(url, chat_id, user, lang):
                 else:
                     media.append(types.InputMediaPhoto(f))
             bot.send_media_group(chat_id, media)
+
         _cleanup_files(files)
         return True
 
@@ -428,9 +436,7 @@ def download_instagram(url, chat_id, user, lang):
 
     if fmt == "mp3":
         cmd = base_cmd + [
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
+            "-x", "--audio-format", "mp3", "--audio-quality", "0"
         ]
     else:
         cmd = base_cmd + [
@@ -454,44 +460,40 @@ def download_instagram(url, chat_id, user, lang):
     video_exts = (".mp4", ".webm", ".mov", ".mkv")
     image_exts = (".jpg", ".jpeg", ".png", ".webp")
 
+    # -------- MP3 режим --------
     if fmt == "mp3":
-        audio_path = None
-        for path in files:
-            if os.path.splitext(path)[1].lower() in audio_exts:
-                audio_path = path
-                break
+        audio_path = next((p for p in files if p.endswith(audio_exts)), None)
         if audio_path:
-            with open(audio_path, "rb") as f:
-                bot.send_audio(chat_id, f)
+            bot.send_audio(chat_id, open(audio_path, "rb"))
             _cleanup_files(files)
             return True
+
         bot.send_message(chat_id, t["download_failed"])
-        _cleanup_files(files)
         return False
 
-    video_path = None
-    for path in files:
-        if os.path.splitext(path)[1].lower() in video_exts:
-            video_path = path
-            break
+    # -------- ВІДЕО --------
+    video_path = next((p for p in files if p.endswith(video_exts)), None)
 
     if video_path:
-        with open(video_path, "rb") as f:
-            bot.send_video(chat_id, f)
+        bot.send_video(chat_id, open(video_path, "rb"))
+
+        if user.get("video_plus_audio"):
+            audio_path = extract_audio(video_path)
+            if audio_path:
+                bot.send_audio(chat_id, open(audio_path, "rb"))
+
         _cleanup_files(files)
         return True
 
-    img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
+    # -------- ФОТО --------
+    img_paths = [p for p in files if p.endswith(image_exts)]
     if img_paths:
         if len(img_paths) == 1:
-            with open(img_paths[0], "rb") as f:
-                bot.send_photo(chat_id, f)
+            bot.send_photo(chat_id, open(img_paths[0], "rb"))
         else:
-            media = []
-            for p in sorted(img_paths):
-                f = open(p, "rb")
-                media.append(types.InputMediaPhoto(f))
+            media = [types.InputMediaPhoto(open(p, "rb")) for p in img_paths]
             bot.send_media_group(chat_id, media)
+
         _cleanup_files(files)
         return True
 
@@ -500,7 +502,7 @@ def download_instagram(url, chat_id, user, lang):
     return False
 
 
-# =============================== GENERIC (ВСЕ ІНШЕ) ===============================
+# =============================== GENERIC ===============================
 
 def download_generic(url, chat_id, user, lang):
     t = texts[lang]
@@ -519,26 +521,15 @@ def download_generic(url, chat_id, user, lang):
     ]
 
     if fmt == "mp3":
-        cmd += [
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
-        ]
+        cmd += ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
     elif fmt == "webm":
-        cmd += [
-            "-f", "bestvideo*+bestaudio/best",
-            "--merge-output-format", "webm",
-        ]
+        cmd += ["-f", "bestvideo*+bestaudio/best", "--merge-output-format", "webm"]
     else:
-        cmd += [
-            "-f", "bestvideo*+bestaudio/best",
-            "--merge-output-format", "mp4",
-        ]
+        cmd += ["-f", "bestvideo*+bestaudio/best", "--merge-output-format", "mp4"]
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
-    except subprocess.CalledProcessError as e:
-        print("Generic error:", e.stderr)
+    except:
         bot.send_message(chat_id, t["download_failed"])
         return False
 
@@ -550,30 +541,28 @@ def download_generic(url, chat_id, user, lang):
     audio_exts = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
     video_exts = (".mp4", ".webm", ".mov", ".mkv")
 
+    # -------- MP3 режим --------
     if fmt == "mp3":
-        audio_path = None
-        for path in files:
-            if os.path.splitext(path)[1].lower() in audio_exts:
-                audio_path = path
-                break
+        audio_path = next((p for p in files if p.endswith(audio_exts)), None)
         if audio_path:
-            with open(audio_path, "rb") as f:
-                bot.send_audio(chat_id, f)
+            bot.send_audio(chat_id, open(audio_path, "rb"))
             _cleanup_files(files)
             return True
+
         bot.send_message(chat_id, t["download_failed"])
-        _cleanup_files(files)
         return False
 
-    video_path = None
-    for path in files:
-        if os.path.splitext(path)[1].lower() in video_exts:
-            video_path = path
-            break
+    # -------- ВІДЕО --------
+    video_path = next((p for p in files if p.endswith(video_exts)), None)
 
     if video_path:
-        with open(video_path, "rb") as f:
-            bot.send_video(chat_id, f)
+        bot.send_video(chat_id, open(video_path, "rb"))
+
+        if user.get("video_plus_audio"):
+            audio_path = extract_audio(video_path)
+            if audio_path:
+                bot.send_audio(chat_id, open(audio_path, "rb"))
+
         _cleanup_files(files)
         return True
 
@@ -581,13 +570,6 @@ def download_generic(url, chat_id, user, lang):
     _cleanup_files(files)
     return False
 
-
-def _cleanup_files(files):
-    for p in files:
-        try:
-            os.remove(p)
-        except:
-            pass
 
 
 # ============================================================
@@ -723,4 +705,5 @@ if __name__ == "__main__":
 
     # ❗ Запуск Flask-сервера для Render
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
 
