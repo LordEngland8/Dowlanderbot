@@ -2,6 +2,7 @@ texts = {
 
     # ====================== УКРАЇНСЬКА ======================
     "uk": {
+        # --- Меню / Кнопки ---
         "menu": "Меню",
         "profile": "Профіль",
         "subscription": "Підписка",
@@ -9,23 +10,28 @@ texts = {
         "language": "Мова",
         "help": "Про бота",
         "back": "Назад",
+        "btn_back": "⬅ Назад",
+        "btn_menu": "📋 Меню",
 
-        "lang_saved": "✅ Мову збережено! 🇺🇦",
+        # --- Системні повідомлення ---
+        "lang_saved": "✅ Мову збережено!",
         "welcome": "👋 Привіт! Надішли посилання на відео або TikTok/Instagram.",
         "enter_url": "📎 Надішли посилання!",
-        "free_version": "💎 Безкоштовна версія.",
-        "help_text": "🤖 Бот вміє:\n• Завантажувати відео з TikTok/Instagram\n• Показувати профіль\n• Має налаштування",
         "not_understood": "😅 Не розумію, обери кнопку.",
-
         "loading": "⏳ Завантаження…",
+        "saved": "✔ Збережено!",
+
+        # --- Завантаження / Помилки ---
         "unsupported": "❌ Ця платформа поки не підтримується.",
         "yt_disabled": "⛔ Завантаження з YouTube тимчасово недоступне.",
         "download_failed": "❌ Не вдалося скачати медіа. Спробуй інше посилання.",
         "tiktok_error": "❌ Не вдалося завантажити з TikTok.",
         "ig_error": "❌ Не вдалося завантажити з Instagram.",
+        "audio_extract_error": "❌ Не вдалося витягнути аудіо.",
         "tiktok_photo_caption": "📷 Фото з TikTok",
 
-        "lbl_name": "Ім’я",
+        # --- Профіль ---
+        "lbl_name": "Ім'я",
         "lbl_subscription": "Підписка",
         "lbl_downloaded": "Завантажено",
         "lbl_format": "Формат",
@@ -34,7 +40,13 @@ texts = {
         "yes": "Так",
         "no": "Ні",
 
-        "subscription_names": {"free": "Безкоштовна 💎"}
+        # --- Підписка ---
+        "free_version": "💎 Безкоштовна версія.",
+        "subscription_names": {"free": "Безкоштовна 💎"},
+
+        # --- Загальні заголовки ---
+        "settings_title": "⚙️ Налаштування:",
+        "profile_title": "👤 Профіль",
     },
 
     # ====================== ENGLISH ======================
@@ -46,20 +58,22 @@ texts = {
         "language": "Language",
         "help": "About bot",
         "back": "Back",
+        "btn_back": "⬅ Back",
+        "btn_menu": "📋 Menu",
 
-        "lang_saved": "✅ Language saved! 🇬🇧",
+        "lang_saved": "✅ Language saved!",
         "welcome": "👋 Hello! Send a link (TikTok / Instagram).",
         "enter_url": "📎 Send a link!",
-        "free_version": "💎 Free version.",
-        "help_text": "🤖 Bot can:\n• Download videos from TikTok/Instagram\n• Show profile\n• Has settings",
         "not_understood": "😅 I don't understand, use the buttons.",
-
         "loading": "⏳ Downloading…",
+        "saved": "✔ Saved!",
+
         "unsupported": "❌ This platform is not supported yet.",
         "yt_disabled": "⛔ Downloading from YouTube is temporarily unavailable.",
         "download_failed": "❌ Failed to download media. Try another link.",
         "tiktok_error": "❌ Failed to download from TikTok.",
         "ig_error": "❌ Failed to download from Instagram.",
+        "audio_extract_error": "❌ Failed to extract audio.",
         "tiktok_photo_caption": "📷 Photo from TikTok",
 
         "lbl_name": "Name",
@@ -71,7 +85,11 @@ texts = {
         "yes": "Yes",
         "no": "No",
 
-        "subscription_names": {"free": "Free 💎"}
+        "free_version": "💎 Free version.",
+        "subscription_names": {"free": "Free 💎"},
+
+        "settings_title": "⚙️ Settings:",
+        "profile_title": "👤 Profile",
     },
 
     # ====================== РУССКИЙ ======================
@@ -83,20 +101,22 @@ texts = {
         "language": "Язык",
         "help": "О боте",
         "back": "Назад",
+        "btn_back": "⬅ Назад",
+        "btn_menu": "📋 Меню",
 
-        "lang_saved": "✅ Язык сохранён! 🇷🇺",
+        "lang_saved": "✅ Язык сохранён!",
         "welcome": "👋 Привет! Пришли ссылку (TikTok / Instagram).",
         "enter_url": "📎 Пришли ссылку!",
-        "free_version": "💎 Бесплатная версия.",
-        "help_text": "🤖 Бот умеет:\n• Скачать видео из TikTok/Instagram\n• Показать профиль\n• Настройки",
         "not_understood": "😅 Не понимаю, выбери кнопку.",
-
         "loading": "⏳ Загрузка…",
+        "saved": "✔ Сохранено!",
+
         "unsupported": "❌ Эта платформа пока не поддерживается.",
         "yt_disabled": "⛔ Загрузка с YouTube временно недоступна.",
         "download_failed": "❌ Не удалось скачать медиа. Попробуй другую ссылку.",
         "tiktok_error": "❌ Не удалось скачать из TikTok.",
         "ig_error": "❌ Не удалось скачать из Instagram.",
+        "audio_extract_error": "❌ Не удалось извлечь аудио.",
         "tiktok_photo_caption": "📷 Фото из TikTok",
 
         "lbl_name": "Имя",
@@ -108,7 +128,11 @@ texts = {
         "yes": "Да",
         "no": "Нет",
 
-        "subscription_names": {"free": "Бесплатная 💎"}
+        "free_version": "💎 Бесплатная версия.",
+        "subscription_names": {"free": "Бесплатная 💎"},
+
+        "settings_title": "⚙️ Настройки:",
+        "profile_title": "👤 Профиль",
     },
 
     # ====================== FRANÇAIS ======================
@@ -120,20 +144,22 @@ texts = {
         "language": "Langue",
         "help": "À propos du bot",
         "back": "Retour",
+        "btn_back": "⬅ Retour",
+        "btn_menu": "📋 Menu",
 
         "lang_saved": "🇫🇷 Langue enregistrée !",
         "welcome": "👋 Bonjour ! Envoie un lien (TikTok / Instagram).",
         "enter_url": "📎 Envoie un lien !",
-        "free_version": "💎 Version gratuite.",
-        "help_text": "🤖 Le bot peut :\n• Télécharger des vidéos TikTok/Instagram\n• Afficher le profil\n• Paramètres",
         "not_understood": "😅 Je ne comprends pas, utilise les boutons.",
-
         "loading": "⏳ Téléchargement…",
+        "saved": "✔ Enregistré !",
+
         "unsupported": "❌ Cette plateforme n'est pas encore prise en charge.",
         "yt_disabled": "⛔ Le téléchargement depuis YouTube est temporairement indisponible.",
-        "download_failed": "❌ Échec du téléchargement du média. Essaie un autre lien.",
+        "download_failed": "❌ Impossible de télécharger le média.",
         "tiktok_error": "❌ Échec du téléchargement depuis TikTok.",
         "ig_error": "❌ Échec du téléchargement depuis Instagram.",
+        "audio_extract_error": "❌ Impossible d'extraire l'audio.",
         "tiktok_photo_caption": "📷 Photo depuis TikTok",
 
         "lbl_name": "Nom",
@@ -145,7 +171,11 @@ texts = {
         "yes": "Oui",
         "no": "Non",
 
-        "subscription_names": {"free": "Gratuit 💎"}
+        "free_version": "💎 Version gratuite.",
+        "subscription_names": {"free": "Gratuit 💎"},
+
+        "settings_title": "⚙️ Paramètres:",
+        "profile_title": "👤 Profil",
     },
 
     # ====================== DEUTSCH ======================
@@ -157,20 +187,22 @@ texts = {
         "language": "Sprache",
         "help": "Über Bot",
         "back": "Zurück",
+        "btn_back": "⬅ Zurück",
+        "btn_menu": "📋 Menü",
 
         "lang_saved": "🇩🇪 Sprache gespeichert!",
         "welcome": "👋 Hallo! Sende einen Link (TikTok / Instagram).",
         "enter_url": "📎 Sende einen Link!",
-        "free_version": "💎 Kostenlose Version.",
-        "help_text": "🤖 Bot kann:\n• Videos von TikTok/Instagram herunterladen\n• Profil anzeigen\n• Einstellungen",
-        "not_understood": "😅 Ich verstehe nicht, benutze die Tasten.",
-
+        "not_understood": "😅 Ich verstehe nicht, benutze die Buttons.",
         "loading": "⏳ Wird heruntergeladen…",
+        "saved": "✔ Gespeichert!",
+
         "unsupported": "❌ Diese Plattform wird noch nicht unterstützt.",
-        "yt_disabled": "⛔ Das Herunterladen von YouTube ist vorübergehend nicht verfügbar.",
-        "download_failed": "❌ Medien konnten nicht heruntergeladen werden. Versuch einen anderen Link.",
-        "tiktok_error": "❌ Herunterladen von TikTok fehlgeschlagen.",
-        "ig_error": "❌ Herunterladen von Instagram fehlgeschlagen.",
+        "yt_disabled": "⛔ Herunterladen von YouTube ist vorübergehend deaktiviert.",
+        "download_failed": "❌ Medien konnten nicht heruntergeladen werden.",
+        "tiktok_error": "❌ Fehler beim TikTok-Download.",
+        "ig_error": "❌ Fehler beim Instagram-Download.",
+        "audio_extract_error": "❌ Audio konnte nicht extrahiert werden.",
         "tiktok_photo_caption": "📷 Foto von TikTok",
 
         "lbl_name": "Name",
@@ -182,6 +214,10 @@ texts = {
         "yes": "Ja",
         "no": "Nein",
 
-        "subscription_names": {"free": "Kostenlos 💎"}
+        "free_version": "💎 Kostenlose Version.",
+        "subscription_names": {"free": "Kostenlos 💎"},
+
+        "settings_title": "⚙️ Einstellungen:",
+        "profile_title": "👤 Profil",
     }
 }
