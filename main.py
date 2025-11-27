@@ -12,7 +12,7 @@ from flask import Flask, request
 #                     ПІДКЛЮЧЕННЯ МОВ
 # ============================================================
 
-from languages import texts   # словник texts = { "uk": {...}, ... }
+from languages import texts   # 🇺🇦 🇬🇧 🇷🇺 🇫🇷 🇩🇪
 
 
 # ============================================================
@@ -44,7 +44,10 @@ def load_users():
 
 
 def save_users(data):
-    json.dump(data, open(USER_FILE, "w", encoding="utf-8"), indent=4, ensure_ascii=False)
+    json.dump(
+        data, open(USER_FILE, "w", encoding="utf-8"),
+        indent=4, ensure_ascii=False
+    )
 
 
 users = load_users()
@@ -92,11 +95,11 @@ def clean_text(text):
 CMD = {
     "menu": ["меню", "menu", "menü"],
     "profile": ["профіль", "проф", "profile", "profil"],
-    "settings": ["налаштування", "налаш", "настройки", "settings", "einstellungen", "paramètres", "parametre"],
+    "settings": ["налаштування", "налаш", "настройки", "settings", "einstellungen", "paramètres"],
     "language": ["мова", "язык", "language", "langue", "sprache"],
-    "subscription": ["підпис", "подпис", "subscription", "abonnement", "mitgliedschaft"],
-    "help": ["про бота", "help", "about", "à propos", "über bot"],
-    "back": ["назад", "back", "retour", "zurück", "⬅️"],
+    "subscription": ["підписка", "подписка", "subscription", "abonnement", "mitgliedschaft"],
+    "help": ["про бота", "help", "about", "о боте", "à propos", "über bot"],
+    "back": ["назад", "back", "retour", "zurück"]
 }
 
 
@@ -114,11 +117,9 @@ def match_cmd(text):
 # ============================================================
 
 def main_menu(user):
-    lang = user["language"]
-    t = texts[lang]
+    t = texts[user["language"]]
 
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-
     kb.row(types.KeyboardButton(f"📋 {t['menu']}"),
            types.KeyboardButton(f"👤 {t['profile']}"))
 
@@ -132,129 +133,140 @@ def main_menu(user):
 
 
 # ============================================================
-#                 INLINE-НАЛАШТУВАННЯ
+#                 INLINE НАЛАШТУВАННЯ
 # ============================================================
 
 def settings_keyboard(user):
-    lang = user["language"]
-    t = texts[lang]
+    t = texts[user["language"]]
 
     kb = types.InlineKeyboardMarkup(row_width=2)
-
     kb.row(
         types.InlineKeyboardButton("MP4", callback_data="format_mp4"),
         types.InlineKeyboardButton("MP3", callback_data="format_mp3"),
     )
     kb.add(types.InlineKeyboardButton("WEBM", callback_data="format_webm"))
 
-    vpa_state = f"✔ {t['yes']}" if user["video_plus_audio"] else f"✖ {t['no']}"
-    kb.add(types.InlineKeyboardButton(f"{t['lbl_video_plus_audio']}: {vpa_state}", callback_data="toggle_vpa"))
+    state = f"✔ {t['yes']}" if user["video_plus_audio"] else f"✖ {t['no']}"
+    kb.add(types.InlineKeyboardButton(
+        f"{t['lbl_video_plus_audio']}: {state}",
+        callback_data="toggle_vpa"
+    ))
 
     kb.add(types.InlineKeyboardButton("⬅ " + t["back"], callback_data="cmd_back"))
-
     return kb
 
 
 # ============================================================
-#                      CALLBACK
+#                   CALLBACK HANDLER
 # ============================================================
 
 @bot.callback_query_handler(func=lambda c: True)
 def callback(c):
     user = get_user(c.from_user)
-    lang = user["language"]
-    t = texts[lang]
-
-    bot.answer_callback_query(c.id)
+    t = texts[user["language"]]
     data = c.data
 
-    if data == "cmd_menu":
+    bot.answer_callback_query(c.id)
+
+    # ====== menu ======
+    if data == "cmd_back" or data == "cmd_menu":
         bot.send_message(c.message.chat.id, t["enter_url"], reply_markup=main_menu(user))
         return
 
+    # ====== profile ======
     if data == "cmd_profile":
-        msg_text = (
+        msg = (
             f"👤 {t['profile']}\n\n"
             f"🆔 `{c.from_user.id}`\n"
             f"👋 {t['lbl_name']}: {user['name']}\n"
             f"🎥 {t['lbl_downloaded']}: {user['videos_downloaded']}\n"
             f"🎞️ {t['lbl_format']}: {user['format'].upper()}\n"
-            f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if user['video_plus_audio'] else t['no']}\n"
+            f"🎬 {t['lbl_video_plus_audio']}: "
+            f"{t['yes'] if user['video_plus_audio'] else t['no']}\n"
             f"📅 {t['lbl_since']}: {user['joined']}\n"
         )
-        bot.send_message(c.message.chat.id, msg_text, parse_mode="Markdown", reply_markup=main_menu(user))
+        bot.send_message(c.message.chat.id, msg, parse_mode="Markdown", reply_markup=main_menu(user))
         return
 
+    # ====== settings ======
     if data == "cmd_settings":
         bot.send_message(c.message.chat.id, f"⚙️ {t['settings']}:", reply_markup=settings_keyboard(user))
         return
 
+    # ====== language ======
     if data == "cmd_language":
         kb = types.InlineKeyboardMarkup()
-        kb.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
-        kb.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
-        kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
-        kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
-        kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
+        for code, name in [
+            ("uk", "🇺🇦 Українська"),
+            ("en", "🇬🇧 English"),
+            ("ru", "🇷🇺 Русский"),
+            ("fr", "🇫🇷 Français"),
+            ("de", "🇩🇪 Deutsch")
+        ]:
+            kb.add(types.InlineKeyboardButton(name, callback_data=f"lang_{code}"))
+
         bot.send_message(c.message.chat.id, t["language"], reply_markup=kb)
         return
 
     if data.startswith("lang_"):
         new_lang = data.replace("lang_", "")
-        if new_lang in texts:
-            user["language"] = new_lang
-            save_users(users)
-            bot.send_message(c.message.chat.id, texts[new_lang]["welcome"], reply_markup=main_menu(user))
+        user["language"] = new_lang
+        save_users(users)
+        bot.send_message(
+            c.message.chat.id,
+            texts[new_lang]["welcome"],
+            reply_markup=main_menu(user)
+        )
         return
 
+    # ====== change format ======
     if data.startswith("format_"):
         fmt = data.replace("format_", "")
         user["format"] = fmt
-        user["audio_only"] = (fmt == "mp3")
+        user["audio_only"] = fmt == "mp3"
         save_users(users)
-        bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=settings_keyboard(user))
+        bot.edit_message_reply_markup(
+            c.message.chat.id, c.message.message_id,
+            reply_markup=settings_keyboard(user)
+        )
         return
 
+    # ====== toggle video+audio ======
     if data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
         save_users(users)
-        bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=settings_keyboard(user))
+        bot.edit_message_reply_markup(
+            c.message.chat.id, c.message.message_id,
+            reply_markup=settings_keyboard(user)
+        )
         return
 
 
 # ============================================================
-#      ФУНКЦІЇ ОБРОБКИ АУДІО/ФАЙЛІВ
+#                 ОПЕРАЦІЇ З ФАЙЛАМИ
 # ============================================================
 
 def extract_audio(video_path):
-    audio_path = video_path.rsplit('.', 1)[0] + ".mp3"
-
-    cmd = [
-        "ffmpeg",
-        "-i", video_path,
-        "-vn",
-        "-acodec", "mp3",
-        "-y",
-        audio_path
-    ]
+    audio_path = video_path.rsplit(".", 1)[0] + ".mp3"
+    cmd = ["ffmpeg", "-i", video_path, "-vn", "-acodec", "mp3", "-y", audio_path]
 
     try:
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
         return audio_path
     except:
         return None
 
 
-def _cleanup_files(files):
-    for p in files:
+def cleanup(files):
+    for f in files:
         try:
-            os.remove(p)
+            os.remove(f)
         except:
             pass
 
 
 # ============================================================
-#        ЗАВАНТАЖЕННЯ TIKTOK / INSTAGRAM / GENERIC
+#                    ГОЛОВНА ФУНКЦІЯ ЗАВАНТАЖЕННЯ
 # ============================================================
 
 def download_from_url(url, chat_id, user, lang):
@@ -274,27 +286,22 @@ def download_from_url(url, chat_id, user, lang):
 
 
 # ============================================================
-#                        TIKTOK
+#                           TIKTOK
 # ============================================================
 
 def download_tiktok(url, chat_id, user, lang):
     t = texts[lang]
     fmt = user["format"]
-    template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.%(ext)s")
+    template = f"{DOWNLOAD_DIR}/{chat_id}_tt.%(ext)s"
 
-    base_cmd = [
-        "yt-dlp",
-        "--force-ipv4",
-        "--no-check-certificates",
+    base = [
+        "yt-dlp", "--force-ipv4", "--no-check-certificates",
         "--referer", "https://www.tiktok.com/",
-        "-o", template,
-        url,
+        "-o", template, url
     ]
 
-    if fmt == "mp3":
-        cmd = base_cmd + ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
-    else:
-        cmd = base_cmd + ["-f", "bv*+ba/best"]
+    cmd = base + (["-x", "--audio-format", "mp3"] if fmt == "mp3"
+                  else ["-f", "bv*+ba/best"])
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -302,72 +309,29 @@ def download_tiktok(url, chat_id, user, lang):
         bot.send_message(chat_id, t["tiktok_error"])
         return False
 
-    files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_tt.*"))
-
-    audio_exts = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
-    video_exts = (".mp4", ".webm", ".mov", ".mkv")
-    image_exts = (".jpg", ".jpeg", ".png", ".webp")
-
-    # MP3 mode
-    if fmt == "mp3":
-        audio_path = next((p for p in files if os.path.splitext(p)[1].lower() in audio_exts), None)
-        if audio_path:
-            bot.send_audio(chat_id, open(audio_path, "rb"))
-            _cleanup_files(files)
-            return True
-        bot.send_message(chat_id, t["download_failed"])
-        return False
-
-    # VIDEO mode
-    video_path = next((p for p in files if os.path.splitext(p)[1].lower() in video_exts), None)
-
-    if video_path:
-        bot.send_video(chat_id, open(video_path, "rb"))
-
-        if user["video_plus_audio"]:
-            audio_path = extract_audio(video_path)
-            if audio_path:
-                bot.send_audio(chat_id, open(audio_path, "rb"))
-
-        _cleanup_files(files)
-        return True
-
-    # PHOTO mode
-    img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
-    if img_paths:
-        if len(img_paths) == 1:
-            bot.send_photo(chat_id, open(img_paths[0], "rb"))
-        else:
-            media = [types.InputMediaPhoto(open(p, "rb")) for p in img_paths]
-            bot.send_media_group(chat_id, media)
-        _cleanup_files(files)
-        return True
-
-    bot.send_message(chat_id, t["download_failed"])
-    return False
+    files = glob.glob(f"{DOWNLOAD_DIR}/{chat_id}_tt.*")
+    return process_downloaded_media(files, chat_id, user, lang)
 
 
 # ============================================================
-#                        INSTAGRAM
+#                         INSTAGRAM
 # ============================================================
 
 def download_instagram(url, chat_id, user, lang):
     t = texts[lang]
     fmt = user["format"]
-    template = os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.%(ext)s")
+    template = f"{DOWNLOAD_DIR}/{chat_id}_ig.%(ext)s"
 
-    base_cmd = [
-        "yt-dlp",
-        "--force-ipv4",
-        "--no-check-certificates",
-        "-o", template,
-        url,
+    base = [
+        "yt-dlp", "--force-ipv4", "--no-check-certificates",
+        "-o", template, url
     ]
 
-    if fmt == "mp3":
-        cmd = base_cmd + ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
-    else:
-        cmd = base_cmd + ["-f", "bestvideo*+bestaudio/best", "--merge-output-format", "mp4"]
+    cmd = base + (
+        ["-x", "--audio-format", "mp3"]
+        if fmt == "mp3"
+        else ["-f", "bestvideo*+bestaudio", "--merge-output-format", "mp4"]
+    )
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -375,80 +339,29 @@ def download_instagram(url, chat_id, user, lang):
         bot.send_message(chat_id, t["ig_error"])
         return False
 
-    files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{chat_id}_ig.*"))
-
-    audio_exts = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
-    video_exts = (".mp4", ".webm", ".mov", ".mkv")
-    image_exts = (".jpg", ".jpeg", ".png", ".webp")
-
-    # MP3 mode
-    if fmt == "mp3":
-        audio_path = next((p for p in files if os.path.splitext(p)[1].lower() in audio_exts), None)
-        if audio_path:
-            bot.send_audio(chat_id, open(audio_path, "rb"))
-            _cleanup_files(files)
-            return True
-
-        bot.send_message(chat_id, t["download_failed"])
-        return False
-
-    # VIDEO mode
-    video_path = next((p for p in files if os.path.splitext(p)[1].lower() in video_exts), None)
-
-    if video_path:
-        bot.send_video(chat_id, open(video_path, "rb"))
-
-        if user["video_plus_audio"]:
-            audio_path = extract_audio(video_path)
-            if audio_path:
-                bot.send_audio(chat_id, open(audio_path, "rb"))
-
-        _cleanup_files(files)
-        return True
-
-    # PHOTO mode
-    img_paths = [p for p in files if os.path.splitext(p)[1].lower() in image_exts]
-
-    if img_paths:
-        if len(img_paths) == 1:
-            bot.send_photo(chat_id, open(img_paths[0], "rb"))
-        else:
-            media = [types.InputMediaPhoto(open(p, "rb")) for p in img_paths]
-            bot.send_media_group(chat_id, media)
-
-        _cleanup_files(files)
-        return True
-
-    bot.send_message(chat_id, t["download_failed"])
-    return False
+    files = glob.glob(f"{DOWNLOAD_DIR}/{chat_id}_ig.*")
+    return process_downloaded_media(files, chat_id, user, lang)
 
 
 # ============================================================
-#                        GENERIC
+#                           GENERIC
 # ============================================================
 
 def download_generic(url, chat_id, user, lang):
     t = texts[lang]
     fmt = user["format"]
-
     ts = str(datetime.now().timestamp()).replace(".", "")
-    base_name = f"{chat_id}_gen_{ts}"
-    template = os.path.join(DOWNLOAD_DIR, base_name + ".%(ext)s")
 
-    cmd = [
-        "yt-dlp",
-        "--force-ipv4",
-        "--no-check-certificates",
-        "-o", template,
-        url,
-    ]
+    template = f"{DOWNLOAD_DIR}/{chat_id}_{ts}.%(ext)s"
+
+    cmd = ["yt-dlp", "-o", template, url]
 
     if fmt == "mp3":
-        cmd += ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
+        cmd += ["-x", "--audio-format", "mp3"]
     elif fmt == "webm":
-        cmd += ["-f", "bestvideo*+bestaudio/best", "--merge-output-format", "webm"]
+        cmd += ["-f", "bestvideo*+bestaudio", "--merge-output-format", "webm"]
     else:
-        cmd += ["-f", "bestvideo*+bestaudio/best", "--merge-output-format", "mp4"]
+        cmd += ["-f", "bestvideo*+bestaudio", "--merge-output-format", "mp4"]
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -456,70 +369,101 @@ def download_generic(url, chat_id, user, lang):
         bot.send_message(chat_id, t["download_failed"])
         return False
 
-    files = glob.glob(os.path.join(DOWNLOAD_DIR, base_name + ".*"))
+    files = glob.glob(f"{DOWNLOAD_DIR}/{chat_id}_{ts}.*")
+    return process_downloaded_media(files, chat_id, user, lang)
 
-    audio_exts = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
-    video_exts = (".mp4", ".webm", ".mov", ".mkv")
 
-    # MP3 mode
+# ============================================================
+#              РОЗПІЗНАВАННЯ ВИДУ МЕДІА
+# ============================================================
+
+def process_downloaded_media(files, chat_id, user, lang):
+    t = texts[lang]
+
+    audio_ext = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
+    video_ext = (".mp4", ".webm", ".mov", ".mkv")
+    image_ext = (".jpg", ".jpeg", ".png", ".webp")
+
+    fmt = user["format"]
+
+    # 🔥 MP3 режим
     if fmt == "mp3":
-        audio_path = next((p for p in files if os.path.splitext(p)[1].lower() in audio_exts), None)
-        if audio_path:
-            bot.send_audio(chat_id, open(audio_path, "rb"))
-            _cleanup_files(files)
+        audio = next((p for p in files if p.endswith(audio_ext)), None)
+        if audio:
+            bot.send_audio(chat_id, open(audio, "rb"))
+            cleanup(files)
             return True
 
         bot.send_message(chat_id, t["download_failed"])
+        cleanup(files)
         return False
 
-    # VIDEO mode
-    video_path = next((p for p in files if os.path.splitext(p)[1].lower() in video_exts), None)
-
-    if video_path:
-        bot.send_video(chat_id, open(video_path, "rb"))
+    # 🔥 Відео
+    video = next((p for p in files if p.endswith(video_ext)), None)
+    if video:
+        bot.send_video(chat_id, open(video, "rb"))
 
         if user["video_plus_audio"]:
-            audio_path = extract_audio(video_path)
-            if audio_path:
-                bot.send_audio(chat_id, open(audio_path, "rb"))
+            audio = extract_audio(video)
+            if audio:
+                bot.send_audio(chat_id, open(audio, "rb"))
 
-        _cleanup_files(files)
+        cleanup(files)
         return True
 
+    # 🔥 Фото
+    images = [p for p in files if p.endswith(image_ext)]
+    if images:
+        if len(images) == 1:
+            bot.send_photo(chat_id, open(images[0], "rb"), caption=t["tiktok_photo_caption"])
+        else:
+            media = []
+            for i, img in enumerate(images):
+                if i == 0:
+                    media.append(types.InputMediaPhoto(open(img, "rb"), caption=t["tiktok_photo_caption"]))
+                else:
+                    media.append(types.InputMediaPhoto(open(img, "rb")))
+            bot.send_media_group(chat_id, media)
+
+        cleanup(files)
+        return True
+
+    # 🔥 Все погано
     bot.send_message(chat_id, t["download_failed"])
+    cleanup(files)
     return False
 
 
 # ============================================================
-#                     ХЕНДЛЕРИ
+#                      ХЕНДЛЕРИ
 # ============================================================
 
 @bot.message_handler(commands=["start"])
 def start(m):
     u = get_user(m.from_user)
-    lang = u["language"]
-
-    bot.send_message(m.chat.id, texts[lang]["welcome"], reply_markup=main_menu(u))
+    t = texts[u["language"]]
+    bot.send_message(m.chat.id, t["welcome"], reply_markup=main_menu(u))
 
 
 @bot.message_handler(func=lambda m: True)
-def msg(m):
+def message_handler(m):
     u = get_user(m.from_user)
-    lang = u["language"]
-    t = texts[lang]
+    t = texts[u["language"]]
 
-    raw_text = m.text or ""
-    txt = clean_text(raw_text)
+    raw = m.text or ""
+    txt = clean_text(raw)
 
-    if raw_text.strip().lower().startswith("http"):
+    # 🔥 якщо це URL
+    if raw.startswith("http"):
         bot.send_message(m.chat.id, t["loading"])
-        ok = download_from_url(raw_text.strip(), m.chat.id, u, lang)
+        ok = download_from_url(raw, m.chat.id, u, u["language"])
 
         if ok:
             u["videos_downloaded"] += 1
             save_users(users)
         return
 
+    # 🔥 розпізнавання команд (меню, профіль, налаштування...)
     cmd = match_cmd(txt)
 
     if cmd == "menu":
@@ -527,34 +471,34 @@ def msg(m):
         return
 
     if cmd == "profile":
-        bot.send_message(
-            m.chat.id,
-            (
-                f"👤 {t['profile']}\n\n"
-                f"🆔 `{m.from_user.id}`\n"
-                f"👋 {t['lbl_name']}: {u['name']}\n"
-                f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
-                f"🎞️ {t['lbl_format']}: {u['format'].upper()}\n"
-                f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
-                f"📅 {t['lbl_since']}: {u['joined']}\n"
-            ),
-            parse_mode="Markdown",
-            reply_markup=main_menu(u),
+        msg = (
+            f"👤 {t['profile']}\n\n"
+            f"🆔 `{m.from_user.id}`\n"
+            f"👋 {t['lbl_name']}: {u['name']}\n"
+            f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
+            f"🎞️ {t['lbl_format']}: {u['format'].upper()}\n"
+            f"🎬 {t['lbl_video_plus_audio']}: "
+            f"{t['yes'] if u['video_plus_audio'] else t['no']}\n"
+            f"📅 {t['lbl_since']}: {u['joined']}\n"
         )
-        return
-
-    if cmd == "language":
-        kb = types.InlineKeyboardMarkup()
-        kb.add(types.InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"))
-        kb.add(types.InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
-        kb.add(types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"))
-        kb.add(types.InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr"))
-        kb.add(types.InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de"))
-        bot.send_message(m.chat.id, t["language"], reply_markup=kb)
+        bot.send_message(m.chat.id, msg, parse_mode="Markdown", reply_markup=main_menu(u))
         return
 
     if cmd == "settings":
         bot.send_message(m.chat.id, f"⚙️ {t['settings']}:", reply_markup=settings_keyboard(u))
+        return
+
+    if cmd == "language":
+        kb = types.InlineKeyboardMarkup()
+        for code, name in [
+            ("uk", "🇺🇦 Українська"),
+            ("en", "🇬🇧 English"),
+            ("ru", "🇷🇺 Русский"),
+            ("fr", "🇫🇷 Français"),
+            ("de", "🇩🇪 Deutsch")
+        ]:
+            kb.add(types.InlineKeyboardButton(name, callback_data=f"lang_{code}"))
+        bot.send_message(m.chat.id, t["language"], reply_markup=kb)
         return
 
     if cmd == "subscription":
@@ -569,23 +513,25 @@ def msg(m):
 
 
 # ============================================================
-#                  КОМАНДИ МЕНЮ
+#               РЕЄСТРАЦІЯ КОМАНД В ТГ
 # ============================================================
 
 def setup_bot_commands():
-    for lang in texts.keys():
+    for lang_code in texts.keys():
+        t = texts[lang_code]
+
         bot.set_my_commands([
-            types.BotCommand("menu", f"📋 {texts[lang]['menu']}"),
-            types.BotCommand("profile", f"👤 {texts[lang]['profile']}"),
-            types.BotCommand("settings", f"⚙ {texts[lang]['settings']}"),
-            types.BotCommand("language", f"🌍 {texts[lang]['language']}"),
-            types.BotCommand("subscription", f"💎 {texts[lang]['subscription']}"),
-            types.BotCommand("help", f"ℹ {texts[lang]['help']}"),
-        ], language_code=lang)
+            types.BotCommand("menu", t["menu"]),
+            types.BotCommand("profile", t["profile"]),
+            types.BotCommand("settings", t["settings"]),
+            types.BotCommand("language", t["language"]),
+            types.BotCommand("subscription", t["subscription"]),
+            types.BotCommand("help", t["help"])
+        ], language_code=lang_code)
 
 
 # ============================================================
-#                     WEBHOOK
+#                        WEBHOOK
 # ============================================================
 
 @app.route("/", methods=["GET"])
@@ -594,15 +540,14 @@ def home():
 
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
-def webhook_receiver():
-    json_str = request.get_data().decode("utf-8")
-    update = types.Update.de_json(json_str)
+def webhook():
+    update = types.Update.de_json(request.get_data().decode("utf-8"))
     bot.process_new_updates([update])
     return "OK", 200
 
 
 # ============================================================
-#                    RUN SERVER
+#                       ЗАПУСК
 # ============================================================
 
 if __name__ == "__main__":
@@ -611,7 +556,10 @@ if __name__ == "__main__":
     setup_bot_commands()
 
     bot.delete_webhook()
-    bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
+    bot.set_webhook(
+        url=WEBHOOK_URL,
+        drop_pending_updates=True
+    )
 
     app.run(
         host="0.0.0.0",
