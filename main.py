@@ -23,7 +23,7 @@ TOKEN = os.getenv("TOKEN") or os.getenv("TELEGRAM_TOKEN", "")
 if not TOKEN or ":" not in TOKEN:
     raise ValueError("❌ TOKEN не встановлено!")
 
-WEBHOOK_HOST = "https://dowlanderbot-2.onrender.com"
+WEBHOOK_HOST = "https://dowlanderbot.onrender.com"
 WEBHOOK_PATH = f"/{TOKEN}"
 WEBHOOK_URL = WEBHOOK_HOST + WEBHOOK_PATH
 
@@ -712,6 +712,7 @@ if __name__ == "__main__":
         port=int(os.getenv("PORT", 10000)),
         debug=False                 # ← не можна вкл. debug на Render
     )
+
 
 
 
