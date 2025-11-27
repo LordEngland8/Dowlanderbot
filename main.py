@@ -683,7 +683,7 @@ def home():
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook_receiver():
-    # ВАЖЛИВО: зчитуємо сирий JSON, як радить pyTelegramBotAPI
+    # Офіційна рекомендація pyTelegramBotAPI
     json_str = request.get_data().decode("utf-8")
     update = types.Update.de_json(json_str)
     bot.process_new_updates([update])
@@ -697,13 +697,21 @@ def webhook_receiver():
 if __name__ == "__main__":
     print("🚀 Запуск Flask + Webhook")
 
-    setup_bot_commands()  # Команди меню (/menu /profile /settings...)
+    setup_bot_commands()
 
-    # ❗ Ставимо новий вебхук
+    # ВАЖЛИВО: скидаємо старий webhook та ставимо новий
     bot.delete_webhook()
-    bot.set_webhook(url=WEBHOOK_URL)
+    bot.set_webhook(
+        url=WEBHOOK_URL,
+        drop_pending_updates=True   # ← ДУЖЕ важливо, щоб не зависало
+    )
 
-    # ❗ Запуск Flask-сервера для Render
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+    # Запуск сервера
+    app.run(
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 10000)),
+        debug=False                 # ← не можна вкл. debug на Render
+    )
+
 
 
