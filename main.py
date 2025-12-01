@@ -214,9 +214,16 @@ def run_download_task(url, chat_id, user_data, lang):
         'no_warnings': True,
         'noplaylist': True,
         'progress_hooks': [lambda d: download_progress_hook(d, chat_id, message_id)],
-        'http_headers': {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'},
+        'http_headers': {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                ' AppleWebKit/537.36 (KHTML, like Gecko)'
+                ' Chrome/91.0.4472.124 Safari/537.36'
+            )
+        },
     }
 
+    # Формат MP3
     if user_data["format"] == "mp3":
         ydl_opts.update({
             'format': 'bestaudio/best',
@@ -227,73 +234,109 @@ def run_download_task(url, chat_id, user_data, lang):
             }],
         })
     else:
-        # 🔥 ЛОГІКА ВІДЕО+АУДІО
+        # Формат Відео
         if user_data["video_plus_audio"]:
-            # 'Так': Примусово об'єднуємо найкраще відео та найкраще аудіо (потрібен FFmpeg)
+            # Вибираємо найкраще відео + звук (FFmpeg required)
             ydl_opts.update({
                 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
             })
         else:
-            # 'Ні': Вибираємо найкращий простий потік (може бути без звуку)
+            # Вибираємо найкращий стрім, навіть якщо без звуку
             ydl_opts.update({
                 'format': 'best[ext=mp4]/best'
             })
 
-
     try:
-        # 3. Процес завантаження
+        # 3. Завантаження файлу
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            
-            # Визначаємо фінальне ім'я файлу
+
+            # Генерація фінального імені
             filename = ydl.prepare_filename(info)
             if user_data["format"] == "mp3":
                 filename = os.path.splitext(filename)[0] + ".mp3"
-            
+
             if os.path.exists(filename):
                 file_path = filename
                 file_size = os.path.getsize(file_path)
 
-                # 4. Відправка файлу
+                # 4. Відправка відео або аудіо
                 with open(file_path, 'rb') as f:
+
+                    # ---- CASE 1: Користувач обрав MP3 ----
                     if user_data["format"] == "mp3":
                         bot.send_chat_action(chat_id, 'upload_voice')
-                        bot.send_audio(chat_id, f, caption="@dowlanderbot", title=info.get('title', 'Audio'))
-                    elif file_size <= (50 * 1024 * 1024):
-                        # До 50 МБ - надсилаємо як відео (з прев'ю)
-                        bot.send_chat_action(chat_id, 'upload_video')
-                        bot.send_video(chat_id, f, caption=f"{info.get('title', '')}\n\n@dowlanderbot", supports_streaming=True)
+                        bot.send_audio(
+                            chat_id,
+                            f,
+                            caption="@dowlanderbot",
+                            title=info.get('title', 'Audio')
+                        )
+
+                    # ---- CASE 2: Відео ----
                     else:
-                        # Більше 50 МБ (до 2 ГБ) - надсилаємо як документ
-                        bot.send_chat_action(chat_id, 'upload_document')
-                        bot.send_document(chat_id, f, caption=f"Файл > 50 МБ\n{info.get('title', '')}\n\n@dowlanderbot")
-                
-                # Оновлення статистики
+                        bot.send_chat_action(chat_id, 'upload_video')
+                        bot.send_video(
+                            chat_id,
+                            f,
+                            caption=f"{info.get('title', '')}\n\n@dowlanderbot",
+                            supports_streaming=True
+                        )
+
+                        # ---- VIDEO + AUDIO MODE ----
+                        if user_data["video_plus_audio"]:
+                            try:
+                                audio_path = file_path.rsplit(".", 1)[0] + ".mp3"
+
+                                # Конвертація аудіо
+                                cmd = (
+                                    f"ffmpeg -i \"{file_path}\" -vn -acodec mp3 -y \"{audio_path}\""
+                                )
+                                os.system(cmd)
+
+                                if os.path.exists(audio_path):
+                                    with open(audio_path, "rb") as audio_file:
+                                        bot.send_audio(
+                                            chat_id,
+                                            audio_file,
+                                            caption=f"{info.get('title', '')} — Audio\n@dowlanderbot",
+                                            title=info.get('title', 'Audio')
+                                        )
+
+                                    os.remove(audio_path)
+
+                            except Exception as e:
+                                logging.error(f"Помилка конвертації аудіо: {e}")
+
+                # 5. Оновлюємо статистику
                 user_data['videos_downloaded'] += 1
                 save_users(users)
-                
+
             else:
                 raise Exception("File not found after download.")
 
     except DownloadError as e:
         logging.error(f"Download Error: {e}")
         bot.edit_message_text(f"❌ {t.get('download_failed')}", chat_id, message_id)
+
     except Exception as e:
         logging.error(f"General Error during download/upload: {e}")
         bot.edit_message_text(f"❌ {t.get('download_failed')}", chat_id, message_id)
+
     finally:
-        # 5. Очистка (Видалення файлів)
+        # 6. Видалення файлу
         if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
             except Exception as e:
                 logging.error(f"Cleanup error: {e}")
-        
-        # Видаляємо статус-повідомлення
+
+        # 7. Видаляємо статус-повідомлення
         try:
             bot.delete_message(chat_id, message_id)
         except:
             pass
+
 
 # ============================================================
 #                     CALLBACK HANDLER
@@ -474,3 +517,4 @@ if __name__ == "__main__":
     
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
