@@ -297,8 +297,6 @@ def run_download_task(url, chat_id, user_data, lang):
 
 @bot.callback_query_handler(func=lambda c: True)
 def callback(c):
-    # ... (інший код функції callback) ...
-
     user = get_user(c.from_user)
     t = texts[user["language"]]
     data = c.data
@@ -310,36 +308,54 @@ def callback(c):
 
     chat_id = c.message.chat.id
     message_id = c.message.message_id
+
+    # 1. Обробка повернення до меню
+    if data == "cmd_back" or data == "cmd_menu":
+        bot.send_message(chat_id, t.get("enter_url"), reply_markup=main_menu(user))
     
-    # ... (інші elif блоки) ...
+    # 2. Перехід до налаштувань
+    elif data == "cmd_settings":
+        bot.edit_message_text(f"⚙️ {t.get('settings_title')}:", chat_id, message_id, reply_markup=settings_keyboard(user))
     
-    # 🔥 ВИПРАВЛЕННЯ БЛОКУ ЗМІНИ МОВИ
+    # 3. Виклик клавіатури мов
+    elif data == "cmd_language":
+        bot.edit_message_text(t["language"], chat_id, message_id, reply_markup=language_keyboard())
+
+    # 4. 🔥 ЗМІНА МОВИ (ВИПРАВЛЕНИЙ НАЙБІЛЬШ НАДІЙНИЙ БЛОК)
     elif data.startswith("lang_"):
         new_lang = data.replace("lang_", "")
         
-        # 1. Оновлюємо дані користувача та зберігаємо їх
+        # Оновлюємо та зберігаємо дані
         user["language"] = new_lang
         save_users(users)
         
-        # Отримуємо новий словник текстів
         new_t = texts[new_lang]
         
-        # 2. Видаляємо старе повідомлення з клавіатурою вибору мови.
-        # Це запобігає помилці редагування.
+        # Видаляємо старе повідомлення, щоб уникнути помилок редагування
         try:
             bot.delete_message(chat_id, message_id)
         except Exception as e:
-            # Логуємо помилку, але продовжуємо роботу
             logging.warning(f"Failed to delete message after language change: {e}")
 
-        # 3. Надсилаємо нове привітання з головним меню вже новою мовою
+        # Надсилаємо нове привітання з головним меню новою мовою
         bot.send_message(
             chat_id,
             new_t["welcome"],
             reply_markup=main_menu(user)
         )
+    
+    # 5. Зміна формату (MP4/MP3)
+    elif data.startswith("format_"):
+        fmt = data.replace("format_", "")
+        user["format"] = fmt
+        save_users(users)
+        bot.edit_message_reply_markup(chat_id, message_id, reply_markup=settings_keyboard(user))
 
-    # ... (інші elif блоки) ...
+    # 6. Перемикач Відео + Аудіо
+    elif data == "toggle_vpa":
+        user["video_plus_audio"] = not user["video_plus_audio"]
+        save_users(users)
+        bot.edit_message_reply_markup(chat_id, message_id, reply_markup=settings_keyboard(user))
 
 # ============================================================
 #                     MESSAGE HANDLERS
@@ -453,4 +469,5 @@ if __name__ == "__main__":
 
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 
