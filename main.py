@@ -28,7 +28,7 @@ TOKEN = os.getenv("TOKEN")
 if not TOKEN:
     raise ValueError("❌ TOKEN не встановлено! Встановіть змінну середовища.")
 
-# Конфігурація для Webhook (використовується на Render/Heroku)
+# Конфігурація для Webhook
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://dowlanderbot.onrender.com")
 WEBHOOK_PATH = f"/{TOKEN}"
 WEBHOOK_URL = WEBHOOK_HOST + WEBHOOK_PATH
@@ -88,11 +88,10 @@ def get_user(u):
             "joined": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "language": "uk",
             "format": "mp4",
-            "video_plus_audio": True # True = Відео + Аудіо (за замовчуванням)
+            "video_plus_audio": True
         }
         save_users(users)
     
-    # Перевірка наявності мови (запобігає краху, якщо мова не визначена)
     if users[uid].get("language") not in texts:
         users[uid]["language"] = "uk"
         save_users(users)
@@ -104,7 +103,6 @@ def get_user(u):
 # ============================================================
 
 def clean_text(text):
-    # Очищення тексту для порівняння команд (видалення емодзі/спецсимволів)
     return re.sub(
         r"[^a-zA-Zа-яА-ЯёЁіІїЇєЄçÇčČšŠğĞüÜöÖâÂêÊôÔùÙàÀéÉ0-9 ]",
         "",
@@ -170,24 +168,24 @@ def language_keyboard():
 #            ЛОГІКА ЗАВАНТАЖЕННЯ (THREADED)
 # ============================================================
 
-# Зберігаємо останній час оновлення для обмеження частоти
-download_progress_hook.last_update = 0
-
 def download_progress_hook(d, chat_id, message_id):
+    # 🔥 ВИПРАВЛЕННЯ NameError: ініціалізуємо атрибут всередині функції
+    if not hasattr(download_progress_hook, 'last_update'):
+        download_progress_hook.last_update = 0
+
     if d['status'] == 'downloading':
         p = d['_percent_str'].strip()
         s = d['_speed_str'].strip()
         
-        # Обмеження частоти оновлень (не частіше ніж раз на 2 секунди)
         current_time = time.time()
-        if not hasattr(download_progress_hook, 'last_update') or current_time - download_progress_hook.last_update > 2:
+        # Обмеження частоти оновлень (не частіше ніж раз на 2 секунди)
+        if current_time - download_progress_hook.last_update > 2:
             try:
                 # Оновлюємо статус повідомлення
                 bot.edit_message_text(f"⏳ **Завантаження:** {p} \n➡️ {s}", 
                                       chat_id, message_id, parse_mode="Markdown")
                 download_progress_hook.last_update = current_time
             except Exception:
-                # Ігноруємо помилки, якщо Telegram не дозволяє часте редагування
                 pass
     elif d['status'] == 'finished':
         pass
@@ -229,14 +227,14 @@ def run_download_task(url, chat_id, user_data, lang):
             }],
         })
     else:
-        # 🔥 ВИПРАВЛЕННЯ ЛОГІКИ ВІДЕО+АУДІО
+        # 🔥 ЛОГІКА ВІДЕО+АУДІО
         if user_data["video_plus_audio"]:
-            # 'Так' (True): Примусово об'єднуємо найкраще відео та найкраще аудіо (потрібен FFmpeg)
+            # 'Так': Примусово об'єднуємо найкраще відео та найкраще аудіо (потрібен FFmpeg)
             ydl_opts.update({
                 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
             })
         else:
-            # 'Ні' (False): Просто вибираємо найкращий потік, який знайдеться (може бути без звуку)
+            # 'Ні': Вибираємо найкращий простий потік (може бути без звуку)
             ydl_opts.update({
                 'format': 'best[ext=mp4]/best'
             })
@@ -327,17 +325,16 @@ def callback(c):
     elif data == "cmd_language":
         bot.edit_message_text(t["language"], chat_id, message_id, reply_markup=language_keyboard())
 
-    # 4. 🔥 ЗМІНА МОВИ (НАДІЙНИЙ БЛОК)
+    # 4. ЗМІНА МОВИ (НАДІЙНИЙ БЛОК)
     elif data.startswith("lang_"):
         new_lang = data.replace("lang_", "")
         
-        # Оновлюємо та зберігаємо дані
         user["language"] = new_lang
         save_users(users)
         
         new_t = texts[new_lang]
         
-        # Видаляємо старе повідомлення, щоб уникнути помилок редагування
+        # Видаляємо старе повідомлення
         try:
             bot.delete_message(chat_id, message_id)
         except Exception as e:
@@ -451,7 +448,6 @@ def webhook():
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
         update = types.Update.de_json(json_string)
-        # Обробка оновлень. Тривалі операції відбуваються в потоках.
         bot.process_new_updates([update])
         return "OK", 200
     else:
@@ -472,11 +468,5 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error(f"❌ Помилка налаштування Webhook: {e}")
 
-    # 💡 ВАЖЛИВО: Для production (наприклад, Render, Heroku) використовуйте Gunicorn.
-    # Запуск через gunicorn main:app автоматично знайде додаток Flask.
-    # Якщо ви запускаєте локально, можете розкоментувати наступний блок:
-    # 
-    # port = int(os.getenv("PORT", 10000))
-    # app.run(host="0.0.0.0", port=port)
-    #
+    # БЛОК ЗАПУСКУ СЕРВЕРА (Зазвичай, його запускає Gunicorn на Render)
     pass
