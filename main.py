@@ -3,8 +3,8 @@ import json
 import threading
 import time
 import re
-from datetime import datetime
 import logging
+from datetime import datetime
 
 from telebot import TeleBot, types
 from flask import Flask, request
@@ -14,8 +14,8 @@ from yt_dlp.utils import DownloadError
 # ============================================================
 #                     ПІДКЛЮЧЕННЯ МОВ
 # ============================================================
-# 🔥 ВАЖЛИВО: Ваш словник 'texts' має бути збережений у languages.py
 try:
+    # Завантаження словника текстів з окремого файлу
     from languages import texts
 except ImportError:
     raise ImportError("❌ Не вдалося імпортувати texts. Переконайтеся, що файл languages.py існує.")
@@ -26,19 +26,19 @@ except ImportError:
 
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise ValueError("❌ TOKEN не встановлено!")
+    raise ValueError("❌ TOKEN не встановлено! Встановіть змінну середовища.")
 
+# Конфігурація для Webhook (використовується на Render/Heroku)
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://dowlanderbot.onrender.com")
 WEBHOOK_PATH = f"/{TOKEN}"
 WEBHOOK_URL = WEBHOOK_HOST + WEBHOOK_PATH
 
-# 🔥 Увімкнення багатопотоковості
+# Налаштування бота та Flask
 bot = TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Налаштування логування
+# Шляхи та логування
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -53,11 +53,10 @@ LANGUAGE_OPTIONS = [
 ]
 
 # ============================================================
-#                   СИСТЕМА КОРИСТУВАЧІВ
+#                   СИСТЕМА КОРИСТУВАЧІВ (users.json)
 # ============================================================
 
-# Простий м'ютекс для запобігання пошкодженню users.json
-file_lock = threading.Lock()
+file_lock = threading.Lock() # М'ютекс для захисту файлу users.json
 
 def load_users():
     if os.path.exists(USER_FILE):
@@ -89,11 +88,11 @@ def get_user(u):
             "joined": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "language": "uk",
             "format": "mp4",
-            "video_plus_audio": True
+            "video_plus_audio": True # True = Відео + Аудіо (за замовчуванням)
         }
         save_users(users)
     
-    # Перевірка наявності мови
+    # Перевірка наявності мови (запобігає краху, якщо мова не визначена)
     if users[uid].get("language") not in texts:
         users[uid]["language"] = "uk"
         save_users(users)
@@ -105,6 +104,7 @@ def get_user(u):
 # ============================================================
 
 def clean_text(text):
+    # Очищення тексту для порівняння команд (видалення емодзі/спецсимволів)
     return re.sub(
         r"[^a-zA-Zа-яА-ЯёЁіІїЇєЄçÇčČšŠğĞüÜöÖâÂêÊôÔùÙàÀéÉ0-9 ]",
         "",
@@ -170,7 +170,9 @@ def language_keyboard():
 #            ЛОГІКА ЗАВАНТАЖЕННЯ (THREADED)
 # ============================================================
 
-# Хук для відображення прогресу завантаження
+# Зберігаємо останній час оновлення для обмеження частоти
+download_progress_hook.last_update = 0
+
 def download_progress_hook(d, chat_id, message_id):
     if d['status'] == 'downloading':
         p = d['_percent_str'].strip()
@@ -188,16 +190,13 @@ def download_progress_hook(d, chat_id, message_id):
                 # Ігноруємо помилки, якщо Telegram не дозволяє часте редагування
                 pass
     elif d['status'] == 'finished':
-        pass # Завантаження завершено, далі буде відправка
-
-download_progress_hook.last_update = 0 # Ініціалізація
+        pass
 
 def run_download_task(url, chat_id, user_data, lang):
     """
     Виконується в окремому потоці для запобігання блокуванню.
     """
     t = texts[lang]
-    downloaded_files = []
     file_path = None
     
     # 1. Надсилаємо "Завантаження..." і зберігаємо ID повідомлення
@@ -230,17 +229,25 @@ def run_download_task(url, chat_id, user_data, lang):
             }],
         })
     else:
-        # Пріоритет MP4 для сумісності
-        ydl_opts.update({
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-        })
+        # 🔥 ВИПРАВЛЕННЯ ЛОГІКИ ВІДЕО+АУДІО
+        if user_data["video_plus_audio"]:
+            # 'Так' (True): Примусово об'єднуємо найкраще відео та найкраще аудіо (потрібен FFmpeg)
+            ydl_opts.update({
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
+            })
+        else:
+            # 'Ні' (False): Просто вибираємо найкращий потік, який знайдеться (може бути без звуку)
+            ydl_opts.update({
+                'format': 'best[ext=mp4]/best'
+            })
+
 
     try:
         # 3. Процес завантаження
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             
-            # Отримуємо ім'я файлу
+            # Визначаємо фінальне ім'я файлу
             filename = ydl.prepare_filename(info)
             if user_data["format"] == "mp3":
                 filename = os.path.splitext(filename)[0] + ".mp3"
@@ -248,7 +255,6 @@ def run_download_task(url, chat_id, user_data, lang):
             if os.path.exists(filename):
                 file_path = filename
                 file_size = os.path.getsize(file_path)
-                downloaded_files.append(file_path)
 
                 # 4. Відправка файлу
                 with open(file_path, 'rb') as f:
@@ -285,7 +291,7 @@ def run_download_task(url, chat_id, user_data, lang):
             except Exception as e:
                 logging.error(f"Cleanup error: {e}")
         
-        # Видаляємо статус-повідомлення, якщо воно ще є
+        # Видаляємо статус-повідомлення
         try:
             bot.delete_message(chat_id, message_id)
         except:
@@ -321,7 +327,7 @@ def callback(c):
     elif data == "cmd_language":
         bot.edit_message_text(t["language"], chat_id, message_id, reply_markup=language_keyboard())
 
-    # 4. 🔥 ЗМІНА МОВИ (ВИПРАВЛЕНИЙ НАЙБІЛЬШ НАДІЙНИЙ БЛОК)
+    # 4. 🔥 ЗМІНА МОВИ (НАДІЙНИЙ БЛОК)
     elif data.startswith("lang_"):
         new_lang = data.replace("lang_", "")
         
@@ -376,13 +382,12 @@ def message_handler(m):
 
     # 1. Перевірка на URL
     if raw.startswith("http"):
-        # 🔥 Бізнес-логіка: заборона YouTube, якщо це вказано в мовному файлі
-        if "youtube.com" in raw or "youtu.be" in raw:
-            if t.get("yt_disabled"):
-                bot.send_message(m.chat.id, t["yt_disabled"], reply_markup=main_menu(u))
-                return
+        # Бізнес-логіка: заборона YouTube, якщо це вказано в мовному файлі
+        if ("youtube.com" in raw or "youtu.be" in raw) and t.get("yt_disabled"):
+            bot.send_message(m.chat.id, t["yt_disabled"], reply_markup=main_menu(u))
+            return
         
-        # 🔥 ЗАПУСК В ОКРЕМОМУ ПОТОЦІ
+        # ЗАПУСК ЗАВАНТАЖЕННЯ В ОКРЕМОМУ ПОТОЦІ
         threading.Thread(
             target=run_download_task,
             args=(raw, m.chat.id, u, u["language"]),
@@ -400,15 +405,15 @@ def message_handler(m):
     if cmd == "profile":
         sub_name = t['subscription_names'].get(u['subscription'], u['subscription'])
         msg = (
-            f"👤 {t.get('profile_title', 'Profile')}\n\n"
+            f"👤 {t.get('profile_title', 'Профіль')}\n\n"
             f"🆔 `{m.from_user.id}`\n"
-            f"👋 {t.get('lbl_name')}: {u['name']}\n"
-            f"💎 {t.get('lbl_subscription')}: {sub_name}\n"
-            f"🎥 {t.get('lbl_downloaded')}: {u['videos_downloaded']}\n"
-            f"🎞️ {t.get('lbl_format')}: {u['format'].upper()}\n"
-            f"🎬 {t.get('lbl_video_plus_audio')}: "
+            f"👋 {t.get('lbl_name', 'Ім\'я')}: {u['name']}\n"
+            f"💎 {t.get('lbl_subscription', 'Підписка')}: {sub_name}\n"
+            f"🎥 {t.get('lbl_downloaded', 'Завантажено')}: {u['videos_downloaded']}\n"
+            f"🎞️ {t.get('lbl_format', 'Формат')}: {u['format'].upper()}\n"
+            f"🎬 {t.get('lbl_video_plus_audio', 'Відео + Аудіо')}: "
             f"{t['yes'] if u['video_plus_audio'] else t['no']}\n"
-            f"📅 {t.get('lbl_since')}: {u['joined']}\n"
+            f"📅 {t.get('lbl_since', 'З')}: {u['joined']}\n"
         )
         bot.send_message(m.chat.id, msg, parse_mode="Markdown", reply_markup=main_menu(u))
         return
@@ -418,7 +423,6 @@ def message_handler(m):
         return
 
     if cmd == "language":
-        # Створюємо клавіатуру з 5 мовами
         bot.send_message(m.chat.id, t["language"], reply_markup=language_keyboard())
         return
 
@@ -439,6 +443,7 @@ def message_handler(m):
 
 @app.route("/", methods=["GET"])
 def home():
+    # Health check для хостингу
     return "Bot is running!", 200
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
@@ -446,8 +451,7 @@ def webhook():
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
         update = types.Update.de_json(json_string)
-        # bot.process_new_updates виконується в основному потоці Flask,
-        # але всі тривалі операції (download_task) винесені в окремі потоки
+        # Обробка оновлень. Тривалі операції відбуваються в потоках.
         bot.process_new_updates([update])
         return "OK", 200
     else:
@@ -458,8 +462,9 @@ def webhook():
 # ============================================================
 
 if __name__ == "__main__":
-    logging.info("🚀 Запуск Flask + Webhook")
+    logging.info("🚀 Запуск конфігурації Webhook")
     try:
+        # Налаштування Webhook при старті програми
         bot.delete_webhook()
         time.sleep(0.5)
         bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
@@ -467,7 +472,11 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error(f"❌ Помилка налаштування Webhook: {e}")
 
-    port = int(os.getenv("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-
-
+    # 💡 ВАЖЛИВО: Для production (наприклад, Render, Heroku) використовуйте Gunicorn.
+    # Запуск через gunicorn main:app автоматично знайде додаток Flask.
+    # Якщо ви запускаєте локально, можете розкоментувати наступний блок:
+    # 
+    # port = int(os.getenv("PORT", 10000))
+    # app.run(host="0.0.0.0", port=port)
+    #
+    pass
