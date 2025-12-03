@@ -226,8 +226,6 @@ def run_download_task(url, chat_id, user_data, lang):
                 ' Chrome/91.0.4472.124 Safari/537.36'
             )
         },
-        # Цей параметр дозволяє завантажувати й не-відео контент (наприклад, фото з Pinterest)
-        'force_generic_extractor': False,
     }
 
     # Формат MP3
@@ -241,7 +239,7 @@ def run_download_task(url, chat_id, user_data, lang):
             }],
         })
     else:
-        # Формат Відео/Зображення (за замовчуванням)
+        # Формат Відео (за замовчуванням)
         if user_data["video_plus_audio"]:
             # Вибираємо найкраще відео + звук (FFmpeg required)
             ydl_opts.update({
@@ -270,7 +268,7 @@ def run_download_task(url, chat_id, user_data, lang):
                 file_ext = os.path.splitext(file_path)[1].lower()
                 caption_text = f"{info.get('title', '')}\n\n@dowlanderbot"
 
-                # 4. Відправка файлу (ОНОВЛЕНА ЛОГІКА)
+                # 4. Відправка файлу
                 with open(file_path, 'rb') as f:
                     
                     if user_data["format"] == "mp3" or file_ext == '.mp3':
@@ -278,18 +276,15 @@ def run_download_task(url, chat_id, user_data, lang):
                         bot.send_chat_action(chat_id, 'upload_voice')
                         bot.send_audio(chat_id, f, caption="@dowlanderbot", title=info.get('title', 'Audio'))
                         
-                    elif file_ext in ('.jpg', '.jpeg', '.png'):
-                        # ---- CASE 2: Фотографії (Pinterest, Imgur тощо) ----
-                        bot.send_chat_action(chat_id, 'upload_photo')
-                        bot.send_photo(chat_id, f, caption=caption_text)
-
+                    # ЛОГІКУ ДЛЯ ФОТО ВИДАЛЕНО
+                    
                     elif file_size <= MAX_VIDEO_SIZE and file_ext in ('.mp4', '.mov', '.webm'):
-                        # ---- CASE 3: Відео (до 50 МБ) ----
+                        # ---- CASE 2: Відео (до 50 МБ) ----
                         bot.send_chat_action(chat_id, 'upload_video')
                         bot.send_video(chat_id, f, caption=caption_text, supports_streaming=True)
                         
                     else:
-                        # ---- CASE 4: Інші файли або велике відео/медіа (> 50 МБ) ----
+                        # ---- CASE 3: Інші файли або велике відео/медіа (> 50 МБ) ----
                         # Використовуємо send_document як універсальний спосіб відправки
                         file_name_display = os.path.basename(file_path)
                         logging.info(f"Sending as document: {file_name_display} ({file_size / (1024*1024):.2f} MB)")
