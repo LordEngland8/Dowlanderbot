@@ -17,14 +17,14 @@ from yt_dlp.utils import DownloadError
 try:
     from languages import texts
 except ImportError:
-    raise ImportError("❌ Не вдалося імпортувати texts. Переконайтеся, що файл languages.py існує.")
+    raise ImportError("❌ Не вдалося імпортувати texts. Переконайтеся що languages.py існує.")
 
 # ============================================================
 #                     КОНФІГУРАЦІЯ
 # ============================================================
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise ValueError("❌ TOKEN не встановлено! Встановіть змінну середовища.")
+    raise ValueError("❌ TOKEN не встановлено!")
 
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://dowlanderbot.onrender.com")
 WEBHOOK_PATH = f"/{TOKEN}"
@@ -34,11 +34,11 @@ bot = TeleBot(TOKEN)
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# Мови
 LANGUAGE_OPTIONS = [
     ("uk", "🇺🇦 Українська"),
     ("en", "🇬🇧 English"),
@@ -48,8 +48,47 @@ LANGUAGE_OPTIONS = [
 ]
 
 # ============================================================
-#                   СИСТЕМА КОРИСТУВАЧІВ
+#             ГЕНЕРАЦІЯ КОМАНД ДЛЯ ВСІХ МОВ
 # ============================================================
+def build_cmd_map():
+    cmd_map = {
+        "menu": [],
+        "profile": [],
+        "settings": [],
+        "language": [],
+        "subscription": [],
+        "help": [],
+        "back": []
+    }
+
+    for lang, pack in texts.items():
+        cmd_map["menu"].append(pack["menu"].lower())
+        cmd_map["profile"].append(pack["profile"].lower())
+        cmd_map["settings"].append(pack["settings"].lower())
+        cmd_map["language"].append(pack["language"].lower())
+        cmd_map["subscription"].append(pack["subscription"].lower())
+        cmd_map["help"].append(pack["help"].lower())
+        cmd_map["back"].append(pack["back"].lower())
+
+    return cmd_map
+
+CMD = build_cmd_map()
+
+# ============================================================
+#             СТАНДАРТНІ ФУНКЦІЇ
+# ============================================================
+
+def clean_text(text):
+    return re.sub(r"[^a-zA-Zа-яА-ЯіІїЇєЄ0-9]+", "", text or "").lower()
+
+def match_cmd(text):
+    text = clean_text(text)
+    for cmd, variants in CMD.items():
+        for v in variants:
+            if clean_text(v) == text:
+                return cmd
+    return None
+
 file_lock = threading.Lock()
 
 def load_users():
@@ -57,18 +96,14 @@ def load_users():
         try:
             with open(USER_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception as e:
-            logging.error(f"Помилка завантаження users.json: {e}")
+        except:
             return {}
     return {}
 
 def save_users(data):
     with file_lock:
-        try:
-            with open(USER_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-        except Exception as e:
-            logging.error(f"Помилка збереження users.json: {e}")
+        with open(USER_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
 users = load_users()
 
@@ -86,156 +121,119 @@ def get_user(u):
         }
         save_users(users)
 
-    if users[uid].get("language") not in texts:
+    if users[uid]["language"] not in texts:
         users[uid]["language"] = "uk"
         save_users(users)
 
     return users[uid]
 
 # ============================================================
-#                   КОМАНДИ
+#               КЛАВІАТУРИ
 # ============================================================
-def clean_text(text):
-    return re.sub(r"[^a-zA-Zа-яА-ЯёЁіІїЇєЄ0-9 ]", "", text or "").strip().lower()
 
-CMD = {
-    "menu": ["меню", "menu", "menü"],
-    "profile": ["профіль", "profile", "profil"],
-    "settings": ["налаштування", "settings", "настройки"],
-    "language": ["мова", "language", "язык"],
-    "subscription": ["підписка", "subscription", "подписка"],
-    "help": ["про бота", "help", "about"],
-    "back": ["назад", "back"]
-}
-
-def match_cmd(text):
-    text = clean_text(text)
-    for cmd, variants in CMD.items():
-        for v in variants:
-            if clean_text(v) in text:
-                return cmd
-    return None
-
-# ============================================================
-#                   КЛАВІАТУРИ
-# ============================================================
 def main_menu(user):
     t = texts[user["language"]]
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    kb.row(types.KeyboardButton(f"📋 {t['menu']}"), types.KeyboardButton(f"👤 {t['profile']}"))
-    kb.row(types.KeyboardButton(f"⚙️ {t['settings']}"), types.KeyboardButton(f"💎 {t['subscription']}"))
-    kb.row(types.KeyboardButton(f"🌍 {t['language']}"), types.KeyboardButton(f"ℹ️ {t['help']}"))
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.row(f"📋 {t['menu']}", f"👤 {t['profile']}")
+    kb.row(f"⚙️ {t['settings']}", f"💎 {t['subscription']}")
+    kb.row(f"🌍 {t['language']}", f"ℹ️ {t['help']}")
+
     return kb
+
 
 def settings_keyboard(user):
     t = texts[user["language"]]
-    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb = types.InlineKeyboardMarkup()
 
     kb.row(
         types.InlineKeyboardButton(f"{'✅ ' if user['format']=='mp4' else ''}MP4", callback_data="format_mp4"),
-        types.InlineKeyboardButton(f"{'✅ ' if user['format']=='mp3' else ''}MP3", callback_data="format_mp3"),
+        types.InlineKeyboardButton(f"{'✅ ' if user['format']=='mp3' else ''}MP3", callback_data="format_mp3")
     )
 
-    state = f"✔ {t['yes']}" if user["video_plus_audio"] else f"✖ {t['no']}"
-    kb.add(types.InlineKeyboardButton(f"{t['lbl_video_plus_audio']}: {state}", callback_data="toggle_vpa"))
+    state = t["yes"] if user["video_plus_audio"] else t["no"]
 
-    kb.add(types.InlineKeyboardButton("⬅ " + t["back"], callback_data="cmd_back"))
+    kb.add(
+        types.InlineKeyboardButton(
+            f"{t['lbl_video_plus_audio']}: {state}",
+            callback_data="toggle_vpa"
+        )
+    )
+
+    kb.add(
+        types.InlineKeyboardButton(f"⬅ {t['back']}", callback_data="cmd_back")
+    )
+
     return kb
 
+
 def language_keyboard():
-    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb = types.InlineKeyboardMarkup()
     for code, name in LANGUAGE_OPTIONS:
         kb.add(types.InlineKeyboardButton(name, callback_data=f"lang_{code}"))
     return kb
 
 # ============================================================
-#                   ЗАВАНТАЖЕННЯ
+#             ЗАВАНТАЖЕННЯ ВІДЕО + АУДІО
 # ============================================================
+
 def download_progress_hook(d, chat_id, message_id):
-    if not hasattr(download_progress_hook, 'last_update'):
-        download_progress_hook.last_update = 0
+    pass  # (поки без індикатора для стабільності)
 
-    if d['status'] == 'downloading':
-        p = d['_percent_str'].strip()
-        s = d['_speed_str'].strip()
 
-        if time.time() - download_progress_hook.last_update > 2:
-            try:
-                bot.edit_message_text(
-                    f"⏳ **Завантаження:** {p}\n➡️ {s}",
-                    chat_id, message_id, parse_mode="Markdown"
-                )
-                download_progress_hook.last_update = time.time()
-            except:
-                pass
-
-def run_download_task(url, chat_id, user_data, lang):
+def run_download_task(url, chat_id, user, lang):
     t = texts[lang]
     file_path = None
 
     try:
-        msg = bot.send_message(chat_id, f"⏳ {t['loading']}...")
-        message_id = msg.message_id
+        m = bot.send_message(chat_id, f"⏳ {t['loading']}...")
+        message_id = m.message_id
     except:
         return
 
-    timestamp = int(time.time())
+    ts = int(time.time())
 
     ydl_opts = {
-        'outtmpl': f'{DOWNLOAD_DIR}/{chat_id}_{timestamp}_%(id)s.%(ext)s',
-        'quiet': True,
-        'no_warnings': True,
-        'noplaylist': True,
-        'progress_hooks': [lambda d: download_progress_hook(d, chat_id, message_id)],
-        'http_headers': {'User-Agent': 'Mozilla/5.0'}
+        "outtmpl": f"{DOWNLOAD_DIR}/{chat_id}_{ts}_%(id)s.%(ext)s",
+        "quiet": True,
+        "noplaylist": True,
+        "no_warnings": True,
+        "http_headers": {"User-Agent": "Mozilla/5.0"},
     }
 
-    # ------------------------------
-    # FORMAT SETTINGS
-    # ------------------------------
-    if user_data["format"] == "mp3":
+    # FORMAT
+    if user["format"] == "mp3":
         ydl_opts.update({
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192'
+            "format": "bestaudio/best",
+            "postprocessors": [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192"
             }]
         })
     else:
-        # VIDEO MODE
-        if user_data["video_plus_audio"]:
-            ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio/best'
+        if user["video_plus_audio"]:
+            ydl_opts["format"] = "bestvideo[ext=mp4]+bestaudio/best"
         else:
-            ydl_opts['format'] = 'best[ext=mp4]/best'
+            ydl_opts["format"] = "best[ext=mp4]/best"
 
     try:
-        # -------------------------
-        # DOWNLOAD
-        # -------------------------
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
 
+            info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            if user_data["format"] == "mp3":
+
+            if user["format"] == "mp3":
                 filename = filename.rsplit(".", 1)[0] + ".mp3"
 
             if not os.path.exists(filename):
-                raise Exception("Downloaded file not found.")
+                raise Exception("File missing")
 
             file_path = filename
 
-            # -------------------------
-            # SEND FILES
-            # -------------------------
-            if user_data["format"] == "mp3":
-                # SEND AUDIO DIRECTLY
-                with open(file_path, 'rb') as f:
-                    bot.send_audio(chat_id, f, caption="@dowlanderbot", title=info.get('title'))
-
-            else:
-                # SEND VIDEO
-                with open(file_path, 'rb') as f:
+            # SEND VIDEO
+            if user["format"] == "mp4":
+                with open(file_path, "rb") as f:
                     bot.send_video(
                         chat_id,
                         f,
@@ -243,153 +241,143 @@ def run_download_task(url, chat_id, user_data, lang):
                         supports_streaming=True
                     )
 
-                # ------------------------------------------
-                # VIDEO + AUDIO — SEND SECOND FILE (MP3)
-                # ------------------------------------------
-                if user_data["video_plus_audio"]:
-                    try:
-                        audio_path = file_path.rsplit(".", 1)[0] + ".mp3"
+                # SEND AUDIO IF ENABLED
+                if user["video_plus_audio"]:
+                    audio_path = file_path.rsplit(".", 1)[0] + ".mp3"
+                    cmd = f'ffmpeg -i "{file_path}" -vn -acodec mp3 -y "{audio_path}"'
+                    os.system(cmd)
 
-                        # Convert to MP3
-                        cmd = f"ffmpeg -i \"{file_path}\" -vn -acodec mp3 -y \"{audio_path}\""
-                        os.system(cmd)
+                    if os.path.exists(audio_path):
+                        time.sleep(0.4)
+                        with open(audio_path, "rb") as af:
+                            bot.send_audio(
+                                chat_id,
+                                af,
+                                caption=f"{info.get('title')} — Audio\n@dowlanderbot"
+                            )
+                        os.remove(audio_path)
 
-                        if os.path.exists(audio_path):
-                            with open(audio_path, "rb") as audio_file:
-                                bot.send_audio(
-                                    chat_id,
-                                    audio_file,
-                                    caption=f"{info.get('title')} — Audio\n@dowlanderbot",
-                                    title=info.get('title')
-                                )
+            # SEND AUDIO ONLY
+            else:
+                with open(file_path, "rb") as f:
+                    bot.send_audio(chat_id, f, caption="@dowlanderbot")
 
-                            os.remove(audio_path)
-
-                    except Exception as e:
-                        logging.error(f"Audio conversion error: {e}")
-
-            # UPDATE USER STATS
-            user_data['videos_downloaded'] += 1
+            user["videos_downloaded"] += 1
             save_users(users)
 
     except Exception as e:
-        logging.error(f"Download ERROR: {e}")
-        bot.edit_message_text(f"❌ {t['download_failed']}", chat_id, message_id)
+        logging.error(f"DOWNLOAD ERROR: {e}")
+        bot.send_message(chat_id, f"❌ {t['download_failed']}")
 
     finally:
-        # DELETE TEMP VIDEO FILE
-        if file_path and os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except:
-                pass
-
-        # DELETE "Loading..." message
         try:
-            bot.delete_message(chat_id, message_id)
+            if message_id:
+                bot.delete_message(chat_id, message_id)
+        except:
+            pass
+        try:
+            if file_path and os.path.exists(file_path):
+                os.remove(file_path)
         except:
             pass
 
+# ============================================================
+#                   CALLBACKS
+# ============================================================
 
-# ============================================================
-#                   CALLBACK HANDLER
-# ============================================================
 @bot.callback_query_handler(func=lambda c: True)
 def callback(c):
     user = get_user(c.from_user)
     t = texts[user["language"]]
     data = c.data
-
-    try:
-        bot.answer_callback_query(c.id)
-    except:
-        pass
-
     chat_id = c.message.chat.id
-    message_id = c.message.message_id
 
     if data == "cmd_back":
         bot.send_message(chat_id, t["enter_url"], reply_markup=main_menu(user))
 
     elif data == "cmd_settings":
-        bot.edit_message_text(t["settings_title"], chat_id, message_id, reply_markup=settings_keyboard(user))
+        bot.edit_message_text(t["settings_title"], chat_id, c.message.message_id, reply_markup=settings_keyboard(user))
 
     elif data == "cmd_language":
-        bot.edit_message_text(t["language"], chat_id, message_id, reply_markup=language_keyboard())
+        bot.edit_message_text(t["language"], chat_id, c.message.message_id, reply_markup=language_keyboard())
 
     elif data.startswith("lang_"):
         lang = data.replace("lang_", "")
         user["language"] = lang
         save_users(users)
-
-        bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, texts[lang]["welcome"], reply_markup=main_menu(user))
 
     elif data.startswith("format_"):
         user["format"] = data.replace("format_", "")
         save_users(users)
-        bot.edit_message_reply_markup(chat_id, message_id, reply_markup=settings_keyboard(user))
+        bot.edit_message_reply_markup(chat_id, c.message.message_id, reply_markup=settings_keyboard(user))
 
     elif data == "toggle_vpa":
         user["video_plus_audio"] = not user["video_plus_audio"]
         save_users(users)
-        bot.edit_message_reply_markup(chat_id, message_id, reply_markup=settings_keyboard(user))
+        bot.edit_message_reply_markup(chat_id, c.message.message_id, reply_markup=settings_keyboard(user))
 
 # ============================================================
 #                   MESSAGE HANDLER
 # ============================================================
+
 @bot.message_handler(commands=["start"])
-def start(m):
-    u = get_user(m.from_user)
-    bot.send_message(m.chat.id, texts[u["language"]]["welcome"], reply_markup=main_menu(u))
+def start_handler(m):
+    user = get_user(m.from_user)
+    t = texts[user["language"]]
+    bot.send_message(m.chat.id, t["welcome"], reply_markup=main_menu(user))
 
 @bot.message_handler(func=lambda m: True)
 def message_handler(m):
-    u = get_user(m.from_user)
-    t = texts[u["language"]]
-    raw = m.text or ""
+    user = get_user(m.from_user)
+    t = texts[user["language"]]
+    text = m.text or ""
 
-    if raw.startswith("http"):
-        if ("youtube.com" in raw or "youtu.be" in raw) and t.get("yt_disabled"):
-            bot.send_message(m.chat.id, t["yt_disabled"])
-            return
-
+    # URL
+    if text.startswith("http"):
         threading.Thread(
             target=run_download_task,
-            args=(raw, m.chat.id, u, u["language"]),
+            args=(text, m.chat.id, user, user["language"]),
             daemon=True
         ).start()
         return
 
-    cmd = match_cmd(raw)
+    cmd = match_cmd(text)
+
     if cmd == "menu":
-        bot.send_message(m.chat.id, t["enter_url"], reply_markup=main_menu(u))
+        bot.send_message(m.chat.id, t["enter_url"], reply_markup=main_menu(user))
+
     elif cmd == "profile":
         msg = (
-            f"👤 {t['profile_title']}\n\n"
-            f"🆔 `{m.from_user.id}`\n"
-            f"👋 {t['lbl_name']}: {u['name']}\n"
-            f"💎 {t['lbl_subscription']}: {u['subscription']}\n"
-            f"🎥 {t['lbl_downloaded']}: {u['videos_downloaded']}\n"
-            f"🎞️ {t['lbl_format']}: {u['format']}\n"
-            f"🎬 {t['lbl_video_plus_audio']}: {t['yes'] if u['video_plus_audio'] else t['no']}\n"
-            f"📅 {t['lbl_since']}: {u['joined']}\n"
+            f"👤 {t['profile_title']}\n"
+            f"ID: `{m.from_user.id}`\n"
+            f"{t['lbl_name']}: {user['name']}\n"
+            f"{t['lbl_subscription']}: {user['subscription']}\n"
+            f"{t['lbl_downloaded']}: {user['videos_downloaded']}\n"
+            f"{t['lbl_format']}: {user['format']}\n"
+            f"{t['lbl_since']}: {user['joined']}"
         )
-        bot.send_message(m.chat.id, msg, parse_mode="Markdown", reply_markup=main_menu(u))
+        bot.send_message(m.chat.id, msg, parse_mode="Markdown", reply_markup=main_menu(user))
+
     elif cmd == "settings":
-        bot.send_message(m.chat.id, t["settings_title"], reply_markup=settings_keyboard(u))
+        bot.send_message(m.chat.id, t["settings_title"], reply_markup=settings_keyboard(user))
+
     elif cmd == "language":
         bot.send_message(m.chat.id, t["language"], reply_markup=language_keyboard())
+
     elif cmd == "subscription":
-        bot.send_message(m.chat.id, t["free_version"], reply_markup=main_menu(u))
+        bot.send_message(m.chat.id, t["free_version"], reply_markup=main_menu(user))
+
     elif cmd == "help":
-        bot.send_message(m.chat.id, t["help_text"], reply_markup=main_menu(u))
+        bot.send_message(m.chat.id, t["help_text"], reply_markup=main_menu(user))
+
     else:
-        bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(u))
+        bot.send_message(m.chat.id, t["not_understood"], reply_markup=main_menu(user))
 
 # ============================================================
-#                   FLASK WEBHOOK
+#                      WEBHOOK
 # ============================================================
+
 @app.route("/", methods=["GET"])
 def home():
     return "Bot is running!", 200
@@ -403,18 +391,19 @@ def webhook():
     return "Forbidden", 403
 
 # ============================================================
-#                   ЗАПУСК
+#                      START
 # ============================================================
+
 if __name__ == "__main__":
     logging.info("🚀 Запуск Webhook")
+
     try:
         bot.delete_webhook()
-        time.sleep(0.5)
+        time.sleep(0.3)
         bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
         logging.info(f"✅ Webhook встановлено: {WEBHOOK_URL}")
     except Exception as e:
-        logging.error(f"❌ Помилка Webhook: {e}")
+        logging.error(f"Webhook error: {e}")
 
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
