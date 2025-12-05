@@ -12,36 +12,34 @@ import yt_dlp
 from yt_dlp.utils import DownloadError
 
 # ============================================================
-#                     ПІДКЛЮЧЕННЯ МОВ
+#                     ПІДКЛЮЧЕННЯ МОВ
 # ============================================================
 try:
-    # Завантаження словника текстів з окремого файлу
-    from languages import texts
+    # Завантаження словника текстів з окремого файлу
+    from languages import texts
 except ImportError:
-    raise ImportError("❌ Не вдалося імпортувати texts. Переконайтеся, що файл languages.py існує.")
+    raise ImportError("❌ Не вдалося імпортувати texts. Переконайтеся, що файл languages.py існує.")
 
 # ============================================================
-#                     КОНФІГУРАЦІЯ
+#                     КОНФІГУРАЦІЯ
 # ============================================================
 
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise ValueError("❌ TOKEN не встановлено! Встановіть змінну середовища.")
+    raise ValueError("❌ TOKEN не встановлено! Встановіть змінну середовища.")
 
-# Конфігурація для Webhook
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://dowlanderbot.onrender.com")
 WEBHOOK_PATH = f"/{TOKEN}"
 WEBHOOK_URL = WEBHOOK_HOST + WEBHOOK_PATH
 
-# Налаштування бота та Flask
 bot = TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Шляхи та логування
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 USER_FILE = "users.json"
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
 
 # 5 мов для клавіатур
 LANGUAGE_OPTIONS = [
@@ -517,3 +515,4 @@ if __name__ == "__main__":
     
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
