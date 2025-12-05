@@ -2,7 +2,6 @@ texts = {
 
     # ====================== УКРАЇНСЬКА ======================
     "uk": {
-        # --- Меню / Кнопки ---
         "menu": "Меню",
         "profile": "Профіль",
         "subscription": "Підписка",
@@ -13,7 +12,6 @@ texts = {
         "btn_back": "⬅ Назад",
         "btn_menu": "📋 Меню",
 
-        # --- Системні повідомлення ---
         "lang_saved": "✅ Мову збережено!",
         "welcome": "👋 Привіт! Надішли посилання на відео або TikTok/Instagram.",
         "enter_url": "📎 Надішли посилання!",
@@ -21,7 +19,6 @@ texts = {
         "loading": "⏳ Завантаження…",
         "saved": "✔ Збережено!",
 
-        # --- Завантаження / Помилки ---
         "unsupported": "❌ Ця платформа поки не підтримується.",
         "yt_disabled": "⛔ Завантаження з YouTube тимчасово недоступне.",
         "download_failed": "❌ Не вдалося скачати медіа. Спробуй інше посилання.",
@@ -30,7 +27,6 @@ texts = {
         "audio_extract_error": "❌ Не вдалося витягнути аудіо.",
         "tiktok_photo_caption": "📷 Фото з TikTok",
 
-        # --- Профіль ---
         "lbl_name": "Ім'я",
         "lbl_subscription": "Підписка",
         "lbl_downloaded": "Завантажено",
@@ -40,13 +36,15 @@ texts = {
         "yes": "Так",
         "no": "Ні",
 
-        # --- Підписка ---
         "free_version": "💎 Безкоштовна версія.",
         "subscription_names": {"free": "Безкоштовна 💎"},
 
-        # --- Загальні заголовки ---
         "settings_title": "⚙️ Налаштування:",
         "profile_title": "👤 Профіль",
+
+        "help_text":
+            "ℹ️ *DowlanderBot* — бот для завантаження відео та аудіо з TikTok, Instagram, Pinterest та інших платформ.\n\n"
+            "Підтримує MP4, MP3, режим Відео+Аудіо та 5 мов."
     },
 
     # ====================== ENGLISH ======================
@@ -90,6 +88,11 @@ texts = {
 
         "settings_title": "⚙️ Settings:",
         "profile_title": "👤 Profile",
+
+        "help_text":
+            "ℹ️ *DowlanderBot* — a multilingual bot for downloading video and audio "
+            "from TikTok, Instagram, Pinterest and more.\n\n"
+            "Supports MP4, MP3 and Video+Audio mode."
     },
 
     # ====================== РУССКИЙ ======================
@@ -113,7 +116,7 @@ texts = {
 
         "unsupported": "❌ Эта платформа пока не поддерживается.",
         "yt_disabled": "⛔ Загрузка с YouTube временно недоступна.",
-        "download_failed": "❌ Не удалось скачать медиа. Попробуй другую ссылку.",
+        "download_failed": "❌ Не удалось скачать медиа.",
         "tiktok_error": "❌ Не удалось скачать из TikTok.",
         "ig_error": "❌ Не удалось скачать из Instagram.",
         "audio_extract_error": "❌ Не удалось извлечь аудио.",
@@ -133,6 +136,10 @@ texts = {
 
         "settings_title": "⚙️ Настройки:",
         "profile_title": "👤 Профиль",
+
+        "help_text":
+            "ℹ️ *DowlanderBot* — бот для скачивания видео и аудио с TikTok, Instagram, Pinterest и других платформ.\n\n"
+            "Поддерживает MP4, MP3 и режим Видео+Аудио."
     },
 
     # ====================== FRANÇAIS ======================
@@ -176,6 +183,11 @@ texts = {
 
         "settings_title": "⚙️ Paramètres:",
         "profile_title": "👤 Profil",
+
+        "help_text":
+            "ℹ️ *DowlanderBot* — bot multilingue pour télécharger vidéos et audio "
+            "depuis TikTok, Instagram, Pinterest et plus.\n\n"
+            "Supporte MP4, MP3 et le mode Vidéo+Audio."
     },
 
     # ====================== DEUTSCH ======================
@@ -198,7 +210,7 @@ texts = {
         "saved": "✔ Gespeichert!",
 
         "unsupported": "❌ Diese Plattform wird noch nicht unterstützt.",
-        "yt_disabled": "⛔ Herunterladen von YouTube ist vorübergehend deaktiviert.",
+        "yt_disabled": "⛔ Herunterladen von YouTube ist deaktiviert.",
         "download_failed": "❌ Medien konnten nicht heruntergeladen werden.",
         "tiktok_error": "❌ Fehler beim TikTok-Download.",
         "ig_error": "❌ Fehler beim Instagram-Download.",
@@ -219,5 +231,10 @@ texts = {
 
         "settings_title": "⚙️ Einstellungen:",
         "profile_title": "👤 Profil",
+
+        "help_text":
+            "ℹ️ *DowlanderBot* — mehrsprachiger Bot zum Herunterladen von Videos und Audio "
+            "von TikTok, Instagram, Pinterest und mehr.\n\n"
+            "Unterstützt MP4, MP3 und Video+Audio."
     }
 }
