@@ -190,6 +190,9 @@ def run_download_task(url, chat_id, user_data, lang):
         'http_headers': {'User-Agent': 'Mozilla/5.0'}
     }
 
+    # ------------------------------
+    # FORMAT SETTINGS
+    # ------------------------------
     if user_data["format"] == "mp3":
         ydl_opts.update({
             'format': 'bestaudio/best',
@@ -200,12 +203,16 @@ def run_download_task(url, chat_id, user_data, lang):
             }]
         })
     else:
+        # VIDEO MODE
         if user_data["video_plus_audio"]:
-            ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
+            ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio/best'
         else:
             ydl_opts['format'] = 'best[ext=mp4]/best'
 
     try:
+        # -------------------------
+        # DOWNLOAD
+        # -------------------------
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
 
@@ -213,29 +220,76 @@ def run_download_task(url, chat_id, user_data, lang):
             if user_data["format"] == "mp3":
                 filename = filename.rsplit(".", 1)[0] + ".mp3"
 
-            if os.path.exists(filename):
-                file_path = filename
+            if not os.path.exists(filename):
+                raise Exception("Downloaded file not found.")
 
+            file_path = filename
+
+            # -------------------------
+            # SEND FILES
+            # -------------------------
+            if user_data["format"] == "mp3":
+                # SEND AUDIO DIRECTLY
                 with open(file_path, 'rb') as f:
-                    if user_data["format"] == "mp3":
-                        bot.send_audio(chat_id, f, caption="@dowlanderbot", title=info.get('title'))
-                    else:
-                        bot.send_video(chat_id, f, caption=f"{info.get('title')}\n@dowlanderbot")
+                    bot.send_audio(chat_id, f, caption="@dowlanderbot", title=info.get('title'))
 
-                user_data['videos_downloaded'] += 1
-                save_users(users)
+            else:
+                # SEND VIDEO
+                with open(file_path, 'rb') as f:
+                    bot.send_video(
+                        chat_id,
+                        f,
+                        caption=f"{info.get('title')}\n@dowlanderbot",
+                        supports_streaming=True
+                    )
+
+                # ------------------------------------------
+                # VIDEO + AUDIO — SEND SECOND FILE (MP3)
+                # ------------------------------------------
+                if user_data["video_plus_audio"]:
+                    try:
+                        audio_path = file_path.rsplit(".", 1)[0] + ".mp3"
+
+                        # Convert to MP3
+                        cmd = f"ffmpeg -i \"{file_path}\" -vn -acodec mp3 -y \"{audio_path}\""
+                        os.system(cmd)
+
+                        if os.path.exists(audio_path):
+                            with open(audio_path, "rb") as audio_file:
+                                bot.send_audio(
+                                    chat_id,
+                                    audio_file,
+                                    caption=f"{info.get('title')} — Audio\n@dowlanderbot",
+                                    title=info.get('title')
+                                )
+
+                            os.remove(audio_path)
+
+                    except Exception as e:
+                        logging.error(f"Audio conversion error: {e}")
+
+            # UPDATE USER STATS
+            user_data['videos_downloaded'] += 1
+            save_users(users)
 
     except Exception as e:
+        logging.error(f"Download ERROR: {e}")
         bot.edit_message_text(f"❌ {t['download_failed']}", chat_id, message_id)
 
     finally:
+        # DELETE TEMP VIDEO FILE
         if file_path and os.path.exists(file_path):
-            os.remove(file_path)
+            try:
+                os.remove(file_path)
+            except:
+                pass
 
+        # DELETE "Loading..." message
         try:
             bot.delete_message(chat_id, message_id)
         except:
             pass
+
 
 # ============================================================
 #                   CALLBACK HANDLER
@@ -363,3 +417,4 @@ if __name__ == "__main__":
 
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
